@@ -1,0 +1,22 @@
+-> Matriz de visualização:
+
+Sabemos que transformar(rotacionar, traduzir, escalonar) um vetor no espaço 3D define um "comportamento" para esse vetor, e portanto, multiplicar qualquer outro vetor arbitrário por esse vetor de "comportamento definido" resultará na mudança de comportamento desse vetor arbitrário com base em suas posições de origem.
+Vetores de "comportamento definido" primordiais, em um mundo tridimensional são geralmente chamados de vetores base - XYZ - e consituem um sistema de coordenadas.
+
+Uma matriz de visualização consiste em criar um um sistema de coordenadas - um conjunto de transformações que definem o comportamento de vetores nesse sistema de coordenadas.
+
+Primeiro, imagina-se um ponto - a câmera.
+A câmera por tanto tem um conjunto de elementos (x, y, z) que define uma posição.
+
+*Perceba que em computação gráfica, para simular o efeito da câmera movemos o mundo de modo que pareça que que esta se movendo é a câmera, mas o contrário não é verdade, OpenGL fixa a câmera na origem do sistema de coordenadas colocando todo volume de visualização ao longo do eixo z negativo.
+
+A câmera observa um alvo. Precisamos encontrar o vetor de direção (do alvo para câmera) para seguirmos determinando nosso sistema de coordenadas de visualização.
+
+Lembre-se, OpenGL vê tudo no eixo -Z e é para la que temos que olhar uma vez querendo que nosso pontos fiquem no volume visivel calculamos a difereça entre a posição da câmera e a posição do alvo (se usarmos uma distância negativa (alvo - camera), um ponto negativo vísivel torna-se positivo acabando por inverter o sentido do espaço de mundo).
+
+Como queremos tudo o que queremos é definir uma orientação, normalizamos o resultado da diferença entre os pontos.
+
+Obtendo o vetor de direção, usa-se um vetor auxiliar perpendicular ao eixo z - do mundo - por meio do produto cruzado dos vetores. Sendo Up x Dir, o vetor perpendicular apontará para direita, muda-los de posição fará que o vetor perpendicular aponte para esquerda. Mais uma vez normalizamos o resultado.
+
+O passo final, é usar o produto cruzado entre o vetor de direção e o vetor direito(ou esquerdo) para encontrar o vetor para cima desse sistema de coordenadas - mudar a ordem mudara fará que o vetor aponte para baixo. Diferente do esperado, não a necessidade de normalização já que ambos vetores de operação já são normalizados.
+

@@ -1,0 +1,5 @@
+INFO: 4.6.13596 Core Profile Context 20.10.35.02 27.20.1034.6
+INFO: ATI Technologies Inc.
+INFO: AMD Radeon(TM) Vega 8 Graphics
+INFO: 4.60
+INFO:------Extensions supported------

@@ -1,0 +1,3 @@
+E:/Documents/Coffe Soul Developer/Code/Projects/Engine/opengl/module3D/include/glm/out/build/x64-Debug/CMakeFiles/glm_dummy.dir
+E:/Documents/Coffe Soul Developer/Code/Projects/Engine/opengl/module3D/include/glm/out/build/x64-Debug/CMakeFiles/edit_cache.dir
+E:/Documents/Coffe Soul Developer/Code/Projects/Engine/opengl/module3D/include/glm/out/build/x64-Debug/CMakeFiles/rebuild_cache.dir
