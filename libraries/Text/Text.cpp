@@ -190,7 +190,7 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::
 	            { xpos + w, ypos + h,   1.0f, 0.0f }  
 			};
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-	genShader("../shaders/new/vs_render_quad.glsl", "../shaders/new/fs_text.glsl");
+	genShader("../shaders/ui/vs_render_quad.glsl", "../shaders/ui/fs_text.glsl");
 	setUniform3f("color", color);	
 	setUniformMat4f("projection", &Text::canvasToClip);
 	addTexture(texID, "tex", 0);
@@ -268,7 +268,7 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float>color, uint t
 	xabs         = position.x;
 
 	genBuffers();
-	genShader("../shaders/new/vs_render_quad.glsl", "../shaders/new/fs_text.glsl");
+	genShader("../shaders/ui/vs_render_quad.glsl", "../shaders/ui/fs_text.glsl");
 	setUniform3f("color", color);	
 	setUniformMat4f("projection", &Text::canvasToClip);
 }
