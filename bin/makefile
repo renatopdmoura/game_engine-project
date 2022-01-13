@@ -1,5 +1,5 @@
 OBJS = ../libraries/CommandLine/CommandLine.cpp ../libraries/Camera/Camera.cpp ../libraries/Text/Text.cpp ../libraries/Quad/Quad.cpp ../libraries/Terrain/Terrain.cpp ../libraries/Object/Object.cpp ../libraries/SRW/SRW.cpp main.cpp 
-OBJ_NAME = CoffeeLabs.exe
+OBJ_NAME = main.exe
 CC = g++
 INCLUDE_PATHS = -I../include/SDL2 -I../include/OpenGL -I../include/freetype -I../include
 LIBRARY_PATHS = -L../lib -L../lib/freetype

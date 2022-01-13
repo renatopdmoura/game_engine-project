@@ -16,11 +16,12 @@ bool QUIT             = false;
 bool LOCKEDMOTION     = false;
 bool COMMANDLINE      = false;
 bool SENDCOMMANDLINE  = false;
+bool SHOWREADME       = false;
 int FRAME_PER_SECOND  = 60.0f;
 int FRAME_TIME        = 1000.0f / FRAME_PER_SECOND;
 
 int main(int argv, char** args){
-	if(initialize("Pura Engine", 1280, 720, true)){
+	if(initialize("Labs", 1280, 720, true)){
 		glEnable(GL_MULTISAMPLE);
 		glEnable(GL_CULL_FACE);
 		glFrontFace(GL_CCW);
@@ -35,7 +36,7 @@ int main(int argv, char** args){
 
 		mat4<float> uiMatrix = orthographic((float)ext_screen_width, 0.0f, (float)ext_screen_height, 0.0f);
 		Text::canvasToClip = uiMatrix;
-		Text readme("../assets/fonts/Humnst777.ttf", 18, 0, 50, vec3<float>(1.0f), "readme.txt");
+		Text readme("../assets/fonts/Humnst777.ttf", 18, 50, 50, vec3<float>(1.0f), "readme.txt");
 		Text fpsMeter("../assets/fonts/Humnst777.ttf", 24, 0, 700, vec3<float>(0.0f, 1.0f, 0.0f), COUNTER);
 
 		Camera fpsCam(vec3<float>(0.0f, 4.0f, 0.0f), vec3<float>(0.0f, -1.0f, -1.0f), 45.0f, 0.1f, 100.0f);
@@ -129,12 +130,17 @@ int main(int argv, char** args){
 						QUIT = true;
 						break;
 					case SDL_KEYDOWN:
-							if(event.key.keysym.scancode == SDL_SCANCODE_RETURN){
-								COMMANDLINE  = !COMMANDLINE;
-								LOCKEDMOTION = !LOCKEDMOTION;
-							}
-							if(event.key.keysym.scancode == SDL_SCANCODE_ESCAPE){
-								LOCKEDMOTION = !LOCKEDMOTION;
+							switch(event.key.keysym.scancode){
+								case SDL_SCANCODE_RETURN:
+									COMMANDLINE  = !COMMANDLINE;
+									LOCKEDMOTION = !LOCKEDMOTION;
+									break;
+								case SDL_SCANCODE_ESCAPE:
+									LOCKEDMOTION = !LOCKEDMOTION;
+									break;
+								case SDL_SCANCODE_F1:
+									SHOWREADME = !SHOWREADME;
+									break;
 							}
 						break;
 					case SDL_WINDOWEVENT:
@@ -199,9 +205,10 @@ int main(int argv, char** args){
 
 			// - Text render
 			cmd.render(COMMANDLINE? "[console]:": "");
-			readme.render();
 			avgFps = counted_frame / (SDL_GetTicks() / 1000.0f);
 			fpsMeter.render(std::to_string(avgFps));
+			if(SHOWREADME) 
+				readme.render();
 			// Text::renders();
 			counted_frame++;
 			SDL_GL_SwapWindow(ext_window);
