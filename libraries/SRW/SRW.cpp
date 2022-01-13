@@ -510,7 +510,7 @@ void SRW::setUniformMat4f(std::string name, mat4<float>* value){
 	}
 }
 
-void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit, bool SRGB, bool SRGBA, uint* parmWidth, uint* parmHeight){
+void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit, uint profile, uint* parmWidth, uint* parmHeight){
 	uint id      = 0;
 	int width    = 0;
 	int height   = 0;
@@ -526,12 +526,17 @@ void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit,
 	}
 	channels = channels == 4? channels + 1: channels == 3? channels + 1: channels == 2? channels - 1: 0; 
 	if(data){
-		if(SRGB)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RED + channels, GL_UNSIGNED_BYTE, data);			
-		else if(SRGBA)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width, height, 0, GL_RED + channels, GL_UNSIGNED_BYTE, data);			
-		else
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RED + channels, width, height, 0, GL_RED + channels, GL_UNSIGNED_BYTE, data);
+		switch(profile){
+			case SRGB_PROFILE:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, GL_RED + channels, GL_UNSIGNED_BYTE, data);			
+				break;
+			case SRGBA_PROFILE:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB_ALPHA, width, height, 0, GL_RED + channels, GL_UNSIGNED_BYTE, data);			
+				break;
+			case DEFAULT_PROFILE:
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED + channels, width, height, 0, GL_RED + channels, GL_UNSIGNED_BYTE, data);
+				break;
+		}
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

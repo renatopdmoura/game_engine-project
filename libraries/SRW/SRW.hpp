@@ -92,7 +92,7 @@ public:
 	void setUniform3f(std::string, vec3f* value);
 	void setUniformMat4f(std::string name, mat4<float>* value);
 
-	void addTexture(const char* texPath, const char* uniformName, uint texUnit, bool SRGB = false, bool SRGBA = false, uint* parmWidth = NULL, uint* parmHeight = NULL);
+	void addTexture(const char* texPath, const char* uniformName, uint texUnit, uint profile = DEFAULT_PROFILE, uint* parmWidth = NULL, uint* parmHeight = NULL);
 	void addTexture(uint& texID, const char* uniformName, uint texUnit, uint uniformType = 0);
 
 	//Initializer uniforms

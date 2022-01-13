@@ -332,6 +332,7 @@ void Text::render(std::string str){
 	            { xpos + w, ypos,       1.0f, 1.0f },
 	            { xpos + w, ypos + h,   1.0f, 0.0f }  
 			};
+		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, glyph.texID);
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);

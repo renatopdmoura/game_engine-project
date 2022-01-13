@@ -9,9 +9,7 @@
 #include "../libraries/Datatype/Datatype.hpp"
 #include "../libraries/CommandLine/CommandLine.hpp"
 
-
 #include <sstream>
-
 bool QUIT             = false;
 bool LOCKEDMOTION     = false;
 bool COMMANDLINE      = false;
@@ -112,6 +110,19 @@ int main(int argv, char** args){
 		obj004.setUniform1f("material.roughness", &mtl000.roughness);
 		obj004.setUniform1f("material.metallic", &mtl000.metallic);
 		obj004.setUniform1f("material.ao", &mtl000.ao);
+
+		Object obj005("../models/basic/plane.obj", TEXTURIZED);
+		obj005.getModel() = rotateX(90.0f) * translate(vec3<float>(0.0f, 2.0f, 10.0f)) ;
+		// obj005.addTexture("../assets/ui/message.png", "material.albedo", 0);
+		// obj005.addTexture("../assets/ui/message.png", "material.normal", 1);
+		// obj005.addTexture("../assets/ui/message.png", "material.roughness", 2);
+		// obj005.addTexture("../assets/ui/message.png", "material.ao", 3);
+
+		obj005.addTexture("../assets/textures/brick_wall/brick_wall_diffuse_4k.jpg", "material.albedo", 0);
+		obj005.addTexture("../assets/textures/brick_wall/brick_wall_nor_gl_4k.jpg", "material.normal", 1);
+		obj005.addTexture("../assets/textures/brick_wall/brick_wall_rough_4k.jpg", "material.roughness", 2);
+		obj005.addTexture("../assets/textures/brick_wall/brick_wall_ao_4k.jpg", "material.ao", 3);
+		obj005.setUniform1f("material.metallic", &mtl000.metallic);
 		
 		Object::completeness();
 
@@ -185,25 +196,33 @@ int main(int argv, char** args){
 			glEnable(GL_DEPTH_TEST);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-			
+		
 			// - Object render
 			// terrain.render();	
 			theta += 0.75f;
 			for(uint i = 0; i < 10; ++i){
 				for(uint j = 0; j < 10; ++j){
-					arrayModels[i * 10 + j] = scale(vec3<float>(0.5f)) * rotateX(theta) * rotateY(theta) * rotateZ(theta) * translate(vec3<float>((j * 10.0f) + (-50.0f), (i * 10.0f) + (-50.0f), i * 5.0f));
+					arrayModels[i * 10 + j] = scale(vec3<float>(0.5f)) * rotateX(theta) * rotateY(theta) * rotateZ(theta) * translate(vec3<float>((j * 10.0f) + (-50.0f), 20.0f, (i * 10.0f) + (-50.0f)));
 				}
 			}
 			obj000.updateInstances();
 			obj000.render(arrayModels.size());
 			obj003.render(arrayColumns.size());
+
 			glUseProgram(SRW::programs[UNIFORM_COLOR]);
 			obj001.render();
 			obj002.render();
 			obj004.render();
 			glUseProgram(0);
+			
+			glUseProgram(SRW::programs[TEXTURIZED]);
+			glDisable(GL_CULL_FACE);
+			obj005.render();
+			glEnable(GL_CULL_FACE);
+			glUseProgram(0);
 
 			// - Text render
+			glDisable(GL_DEPTH_TEST);
 			cmd.render(COMMANDLINE? "[console]:": "");
 			avgFps = counted_frame / (SDL_GetTicks() / 1000.0f);
 			fpsMeter.render(std::to_string(avgFps));
@@ -218,6 +237,7 @@ int main(int argv, char** args){
 		obj002.free();
 		obj003.free();
 		obj004.free();
+		obj005.free();
 		// terrain.free();
 		Text::clean();
 		glDeleteTextures(1, &gPosition);
