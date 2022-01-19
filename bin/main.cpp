@@ -32,18 +32,15 @@ int main(int argv, char** args){
 		glClearDepth(1.0f);
 		glClearColor(0.2f, 0.2f, 0.2, 1.0f);
 
+		uint benchmark = SDL_GetTicks();
+
+		Camera fpsCam(vec3<float>(0.0f, 4.0f, 0.0f), vec3<float>(0.0f, -1.0f, -1.0f), 45.0f, 0.1f, 100.0f);
+
 		mat4<float> uiMatrix = orthographic((float)ext_screen_width, 0.0f, (float)ext_screen_height, 0.0f);
 		Text::canvasToClip = uiMatrix;
 		Text readme("../assets/fonts/Humnst777.ttf", 18, 50, 50, vec3<float>(1.0f), "readme.txt");
 		Text fpsMeter("../assets/fonts/Humnst777.ttf", 24, 0, 700, vec3<float>(0.0f, 1.0f, 0.0f), COUNTER);
 
-		Camera fpsCam(vec3<float>(0.0f, 4.0f, 0.0f), vec3<float>(0.0f, -1.0f, -1.0f), 45.0f, 0.1f, 100.0f);
-		uint gBuffer;
-		uint gDepth;
-		uint gPosition;
-		uint gNormal;
-		uint gAlbedo;
-		SRW::genGeometryBuffer(gBuffer, gDepth, gPosition, gNormal, gAlbedo, ext_screen_width, ext_screen_height);
 		
 		Sun sun = {vec4<float>(0.0f, 1.0f, 0.0f), vec4<float>(0.2f, 0.2f, 0.2f)};
 		std::vector<PointLight> pointLightArray = {{vec4<float>(0.0f, 2.0f, 8.0f),  vec4<float>(20.0f, 0.0f, 0.0f)},
@@ -111,20 +108,14 @@ int main(int argv, char** args){
 		obj004.setUniform1f("material.metallic", &mtl000.metallic);
 		obj004.setUniform1f("material.ao", &mtl000.ao);
 
-		Object obj005("../models/basic/plane.obj", TEXTURIZED);
-		obj005.getModel() = rotateX(90.0f) * translate(vec3<float>(0.0f, 2.0f, 10.0f)) ;
-		// obj005.addTexture("../assets/ui/message.png", "material.albedo", 0);
-		// obj005.addTexture("../assets/ui/message.png", "material.normal", 1);
-		// obj005.addTexture("../assets/ui/message.png", "material.roughness", 2);
-		// obj005.addTexture("../assets/ui/message.png", "material.ao", 3);
-
-		obj005.addTexture("../assets/textures/brick_wall/brick_wall_diffuse_4k.jpg", "material.albedo", 0);
-		obj005.addTexture("../assets/textures/brick_wall/brick_wall_nor_gl_4k.jpg", "material.normal", 1);
-		obj005.addTexture("../assets/textures/brick_wall/brick_wall_rough_4k.jpg", "material.roughness", 2);
-		obj005.addTexture("../assets/textures/brick_wall/brick_wall_ao_4k.jpg", "material.ao", 3);
-		obj005.setUniform1f("material.metallic", &mtl000.metallic);
-		
 		Object::completeness();
+
+		Object obj005("../models/basic/plane.obj", "../shaders/object/vs.glsl", "../shaders/object/fs_blend.glsl");
+		obj005.getModel() = rotateX(90.0f) * translate(vec3<float>(0.0f, 1.0f, 10.0f)) ;
+		obj005.addTexture("../assets/ui/settings.png", "tex", 0);	
+
+		benchmark = SDL_GetTicks();
+		std::cout << "Time to load assets: " << benchmark << std::endl;	
 
 		uint counted_frame = 0;
 		uint elapsed_time  = SDL_GetTicks();
@@ -158,12 +149,6 @@ int main(int argv, char** args){
 						if(event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED){
 							// uiMatrix = orthographic((float)event.window.data1, 0.0f, (float)event.window.data2, 0.0f);
 							// Text::canvasToClip = uiMatrix;
-							glDeleteTextures(1, &gPosition);
-							glDeleteTextures(1, &gNormal);
-							glDeleteTextures(1, &gAlbedo);
-							glDeleteRenderbuffers(1, &gDepth);
-							glDeleteFramebuffers(1, & gBuffer);
-							SRW::genGeometryBuffer(gBuffer, gDepth, gPosition, gNormal, gAlbedo, (uint)event.window.data1, (uint)event.window.data2);
 						}
 						break;
 				}
@@ -215,7 +200,7 @@ int main(int argv, char** args){
 			obj004.render();
 			glUseProgram(0);
 			
-			glUseProgram(SRW::programs[TEXTURIZED]);
+			glUseProgram(obj005.getProgram());
 			glDisable(GL_CULL_FACE);
 			obj005.render();
 			glEnable(GL_CULL_FACE);
@@ -240,11 +225,6 @@ int main(int argv, char** args){
 		obj005.free();
 		// terrain.free();
 		Text::clean();
-		glDeleteTextures(1, &gPosition);
-		glDeleteTextures(1, &gNormal);
-		glDeleteTextures(1, &gAlbedo);
-		glDeleteRenderbuffers(1, &gDepth);
-		glDeleteFramebuffers(1, & gBuffer);
 	}
 	return 0;
 }
