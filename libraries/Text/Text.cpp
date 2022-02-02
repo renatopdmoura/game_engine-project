@@ -195,9 +195,9 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad), quad);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	genShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_text.glsl");
+	setUniform3f("color", color);
 	setUniform1f("fOffsetX", &offset.x);
 	setUniform1f("fOffsetY", &offset.y);
-	setUniform3f("color", color);
 	addTexture(texID, "tex", 0);
 }
 
@@ -383,9 +383,12 @@ void Text::picking(){
 	glUniform3fv(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "ID"), 1, vec3<float>((float)ID / 256.0f).address());
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetX"), offset.x);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetY"), offset.y);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosX"), position.x);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosY"), position.y);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fWidth"), resolution.w);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeight"), resolution.h);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeaderHeight"), headerHeight);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fBorderThickness"), borderThickness);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	if(!childrens.empty()){

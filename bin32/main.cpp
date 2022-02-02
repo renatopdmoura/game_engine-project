@@ -22,7 +22,7 @@ int FRAME_PER_SECOND  = 60.0f;
 int FRAME_TIME        = 1000.0f / FRAME_PER_SECOND;
 
 int main(int argv, char** args){
-	if(initialize("Labs", 1366, 768, false)){
+	if(initialize("Labs", 1366, 768)){
 		// glEnable(GL_MULTISAMPLE);
 		glEnable(GL_CULL_FACE);
 		glFrontFace(GL_CCW);
@@ -109,9 +109,9 @@ int main(int argv, char** args){
 		Text cmdTxtIn("../assets/fonts/Humnst777.ttf", 24.0f, 2.0f, 20.0f, vec3<float>(1.0f), DYNAMIC);
 		CommandLine cmd(&mtl000, cmdTxtIn);
 		// - <x, y, w, h, thickness, backgroundColor, headerColor, borderColor, layout> 
-		Panel panelTools(98.0f, 98.0f, 20.0f, 65.0f, 2.0f, vec4<float>(0.2f, 0.19f, 0.2f), vec3<float>(0.45f, 0.36f, 0.2f), vec3<float>(0.2f));
-		Panel panelDebug(50.0f, 100.0f, 100.0f, 80.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f, 0.8f), vec3<float>(0.65f, 0.2f, 0.2f), vec3<float>(0.2f), ON_BODY);
-		Panel panelWindow(50.0f, 0.0f, 100.0f, 20.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec3<float>(0.65f, 0.34f, 0.2f), vec3<float>(0.2f), ON_BODY);
+		Panel panelTools(98.0f, 98.0f, 20.0f, 65.0f, 2.0f, vec4<float>(0.2f, 0.19f, 0.2f), vec4<float>(0.45f, 0.36f, 0.2f), vec4<float>(0.2f, 0.2f, 0.2f));
+		Panel panelDebug(50.0f, 100.0f, 100.0f, 80.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f, 0.8f), vec4<float>(0.65f, 0.2f, 0.2f), vec4<float>(0.0f), ON_BODY);
+		Panel panelWindow(50.0f, 0.0f, 100.0f, 20.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec4<float>(0.65f, 0.34f, 0.2f), vec4<float>(0.0f), ON_BODY);
 		// - <path, fontSize, x, y,, fontColor, name, layout> 
 		Text titleTools("../assets/fonts/Humnst777.ttf", 18.0f, 4.0f, 50.0f, vec3<float>(0.9f), "TOOLS", ON_HEADER);
 		Text titleDebug("../assets/fonts/Humnst777.ttf", 18.0f, 4.0f, 50.0f, vec3<float>(0.9f), "DEBUG", ON_HEADER);
@@ -292,7 +292,7 @@ int main(int argv, char** args){
 			fpsMeter.render(std::to_string(avgFps));
 
 			GUI::stackRender();
-			GUI::stackPicking();
+			// GUI::stackPicking();
 
 			counted_frame++;
 			SDL_GL_SwapWindow(ext_window);

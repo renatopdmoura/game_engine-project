@@ -1,6 +1,6 @@
 #include "Panel.hpp"
 
-Panel::Panel(float x, float y, float w, float h, float thickness, vec4<float>backgroundColor, vec3<float>headerColor, vec3<float>borderColor, GUI_PanelLayout panelLayout){
+Panel::Panel(float x, float y, float w, float h, float thickness, vec4<float>backgroundColor, vec4<float>headerColor, vec4<float>borderColor, GUI_PanelLayout panelLayout){
 	setID(GUI::instancesCount++);
 	setType(PANEL);
 	setPanelLayout(panelLayout);
@@ -18,7 +18,8 @@ Panel::Panel(float x, float y, float w, float h, float thickness, vec4<float>bac
 	setUniform1f("fPosY", &position.y);
 	setUniform1f("fWidth", &resolution.w);
 	setUniform1f("fHeight", &resolution.h);
-	setUniform1f("fHeaderHeight", &headerHeight);		
+	setUniform1f("fHeaderHeight", &headerHeight);
+	setUniform1f("fBorderThickness", &borderThickness);				
 	GUI::stack.push_back(this);
 }
 
@@ -39,10 +40,9 @@ void Panel::render(){
 	glUseProgram(SRW::programs[GUI_PANEL_PROG]);
 	glBindVertexArray(VAO);
 	glBindBufferBase(GL_UNIFORM_BUFFER, GUI::ubBinding, GUI::uboGUI);
-	glUniform4fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbColor"), 1, rgbBackgroundColor.address());
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "borderThickness"), borderThickness);
-	glUniform3fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbBorderColor"), 1, rgbBorderColor.address());
-	glUniform3fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbHeaderColor"), 1, rgbHeaderColor.address());
+	glUniform4fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbBorderColor"), 1, rgbBorderColor.address());
+	glUniform4fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbHeaderColor"), 1, rgbHeaderColor.address());
+	glUniform4fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbBackgroundColor"), 1, rgbBackgroundColor.address());
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fOffsetX"), offset.x);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fOffsetY"), offset.y);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fPosX"), position.x);
@@ -50,6 +50,7 @@ void Panel::render(){
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fWidth"), resolution.w);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fHeight"), resolution.h);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fHeaderHeight"), headerHeight);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "fBorderThickness"), borderThickness);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	glUseProgram(0);

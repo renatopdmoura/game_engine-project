@@ -94,10 +94,10 @@ protected:
 	vec2<float> offset;
 	bool hidden;
 
+	vec4<float> rgbHeaderColor;	
+	vec4<float> rgbBorderColor;
 	float headerHeight;
-	vec3<float> rgbHeaderColor;	
 	float borderThickness;
-	vec3<float> rgbBorderColor;
 
 	GUI* parent;
 	GUI_Type type;

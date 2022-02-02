@@ -4,11 +4,9 @@ in vec2 canvasCoord;
 
 out vec4 fragment;
 
-uniform float borderThickness;
-uniform vec3 rgbBorderColor;
-uniform vec4 rgbColor;
-uniform vec3 rgbHeaderColor;
-
+uniform vec4 rgbBorderColor;
+uniform vec4 rgbHeaderColor;
+uniform vec4 rgbBackgroundColor;
 uniform float fOffsetX;
 uniform float fOffsetY;
 uniform float fPosX;
@@ -16,26 +14,24 @@ uniform float fPosY;
 uniform float fWidth;
 uniform float fHeight;
 uniform float fHeaderHeight;
+uniform float fBorderThickness;
 
 void main(){
-	float sw = fWidth / 2;
-	float fBorderMinX = (fPosX + fOffsetX) + borderThickness;
-	float fBorderMaxX = (fPosX + fOffsetX) + fWidth - borderThickness;
-	
-	float fBorderMinY = (fPosY + fOffsetY) + borderThickness;
-	float fBorderMaxY = (fPosY + fOffsetY) + fHeight - borderThickness;
+	float fBorderMinX = (fPosX + fOffsetX) + fBorderThickness;
+	float fBorderMaxX = (fPosX + fOffsetX) + fWidth - fBorderThickness;
+	float fBorderMinY = (fPosY + fOffsetY) + fBorderThickness;
+	float fBorderMaxY = (fPosY + fOffsetY) + fHeight - fBorderThickness;
 
-	bool horizontal = canvasCoord.x < fBorderMinX || canvasCoord.x > fBorderMaxX;
-	bool vertical   = canvasCoord.y < fBorderMinY || canvasCoord.y > fBorderMaxY;
+	bool H = canvasCoord.x < fBorderMinX || canvasCoord.x > fBorderMaxX;
+	bool V = canvasCoord.y < fBorderMinY || canvasCoord.y > fBorderMaxY;
 
-	float fHeaderMinY = (fPosY + fOffsetY) + fHeight - (fHeaderHeight + borderThickness);
+	float fHeaderMinY = (fPosY + fOffsetY) + fHeight - (fHeaderHeight + fBorderThickness);
 	float fHeaderMaxY = (fPosY + fOffsetY) + fHeight;
+	
 	if(canvasCoord.y > fHeaderMinY && canvasCoord.y < fHeaderMaxY)
-		fragment = vec4(rgbHeaderColor, 1.0f);
+		fragment = rgbHeaderColor;
 	else
-		fragment = rgbColor;
-
-	if((horizontal ||  vertical) && borderThickness > 0.0f)
-		fragment = vec4(rgbBorderColor, 1.0f);
-
+		fragment = rgbBackgroundColor;
+	if((H || V) && fBorderThickness > 0.0f)
+		fragment = rgbBorderColor;
 }

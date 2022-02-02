@@ -114,7 +114,7 @@ void GUI::updateBuffer(){
 	}
 	// - As coordenadas do objeto se ajustam ao cabeçalho do objeto pai
 	else if(layout == ON_HEADER && isNode){
-		position.x = (ratio.x * ((parent->getResolution().w - parent->getBorderThickness() * 2) - resolution.w) / 100.0f) + parent->getPosition().x;
+		position.x = (ratio.x * ((parent->getResolution().w - parent->getBorderThickness() * 2) - resolution.w) / 100.0f) + parent->getPosition().x + parent->getBorderThickness();
 		position.y = (ratio.y * (parent->getHeaderHeight() - resolution.h) / 100.0f) + parent->getPosition().y + parent->getBorderThickness() + parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f);
 	}
 	// - As coordenadas do objeto se ajustam ao corpo do objeto pai
