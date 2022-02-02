@@ -20,6 +20,10 @@ public:
 	void generateVertexBuffers();
 	inline int getFileLength(std::ifstream& file);
 	inline float getHeightValue(const unsigned char* data, unsigned char numBytes);
+	#if RENDER_DEBUG_MODE
+		void renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar);
+		void renderDebugNormal(mat4<float>& view, mat4<float>& projection);
+	#endif
 private:
 	uint VAO;
 	uint VBO;

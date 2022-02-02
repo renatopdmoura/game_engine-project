@@ -156,6 +156,9 @@ struct vec2{
 	vec2 operator-(const vec2& vector) const{
 		return vec2(x - vector.x, y - vector.y);
 	}
+	vec2 operator+(const float value) const{
+		return vec2(x + value, y + value);
+	}
 	void show(const char* name) const{
 		std::cout << std::setw(10) << name << ":";
 		std::cout << std::setw(10) << "[ " << x << " " << y << " ]" << std::endl;
@@ -410,8 +413,12 @@ mat4<T> perspective(T fovy, T aspect, T zNear, T zFar){
 	// result.matrix[2][0] = (r + l) / (r - l);
 	result[1][1] = (2.0f * zNear) / (t - b);
 	// result.matrix[2][1] = (t + b) / (t - b);
+
+	//Transforma a coordenada z do intervalo do frustum de visualização
+	//para valores não lineares de proporção 1/z
 	result[2][2] = -(zFar + zNear) / (zFar - zNear);
 	result[3][2] = -(2.0f * zFar * zNear) / (zFar - zNear);
+	
 	result[2][3] = -1.0f;
 	result[3][3] = 0.0f;
 	return result;
@@ -442,7 +449,7 @@ mat4<T> perspective(T angle, T w, T h){
 }
 
 template<typename T>
-mat4<T> orthographic(T r, T l, T t, T b, T near, T far){
+mat4<T> orthographic(T l, T r, T b, T t, T near, T far){
 	mat4<T> result;
 	result[0][0] = 2 / (r - l);
 	result[1][1] = 2 / (t - b);
@@ -455,7 +462,7 @@ mat4<T> orthographic(T r, T l, T t, T b, T near, T far){
 }
 
 template<typename T>
-mat4<T> orthographic(T r, T l, T t, T b){
+mat4<T> orthographic(T l, T r, T b, T t){
 	mat4<T> result;
 	result[0][0] = 2 / (r - l);
 	result[1][1] = 2 / (t - b);

@@ -1,5 +1,10 @@
 #ifndef COMMON_H
 #define COMMON_H
+
+#ifndef RENDER_DEBUG_MODE
+#define RENDER_DEBUG_MODE 1
+#endif
+
 #include <SDL.h>
 #include <glew.h>
 #include <string>
@@ -21,8 +26,15 @@ bool createShader(GLuint& program, GLenum shaderType, const std::string& shaderS
 bool linkProgram(GLuint& program);
 
 enum{
-	UNIFORM_COLOR,
-	TEXTURIZED,
+	UNIFORM_COLOR   = 0,
+	TEXTURIZED      = 1,
+	TEXT_PROGRAM    = 2,
+	TERRAIN_PROGRAM = 3,
+	GUI_PROGRAM     = 4,
+	GUI_PANEL_PROG  = 5
+};
+
+enum{
 	UNIFORM_ARRAY,
 	UNIFORM_BLOCK,
 	SRGB_PROFILE,

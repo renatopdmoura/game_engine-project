@@ -11,6 +11,27 @@
 
 std::vector<Object*> Object::stack;
 
+#if RENDER_DEBUG_MODE
+	void Object::renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar){
+		for(uint i = 0; i < Object::stack.size(); ++i){
+			Object::stack[i]->setProgram(SRW::debugPrograms[0]);
+			Object::stack[i]->setUniform1f("zNear", zNear);
+			Object::stack[i]->setUniform1f("zFar", zFar);
+			Object::stack[i]->setUniformMat4f("viewProj", &viewProj);
+			Object::stack[i]->setUniformMat4f("model", &Object::stack[i]->getModel());
+		}
+	}
+
+	void Object::renderDebugNormal(mat4<float>& view, mat4<float>& projection){
+		for(uint i = 0; i < Object::stack.size(); ++i){
+			Object::stack[i]->setProgram(SRW::debugPrograms[1]);
+			Object::stack[i]->setUniformMat4f("view", &view);
+			Object::stack[i]->setUniformMat4f("projection", &projection);
+			Object::stack[i]->setUniformMat4f("model", &Object::stack[i]->getModel());
+		}
+	}
+#endif
+
 // - Verifica se todos os dados para o sombreador pbr foram definidos
 void Object::completeness(){
 	bool success = true;
@@ -480,7 +501,7 @@ bool Object::parser(std::string model_path){
 			edge2 = p3 - p1;
 			deltaUV1 = uv2 - uv1;
 			deltaUV2 = uv3 - uv1;
-			float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+			float f  = (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y)? 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y): 0.0f;
 			vec3<float> tang;
 			tang.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
 			tang.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);

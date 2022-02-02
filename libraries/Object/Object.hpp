@@ -39,7 +39,10 @@ class Object : public SRW{
 	public:
 		static std::vector<Object*> stack;
 		static void completeness();
-
+		#if RENDER_DEBUG_MODE
+			static void renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar);
+			static void renderDebugNormal(mat4<float>& view, mat4<float>& projection);
+		#endif
 		// - Basic functions 
 		Object(std::string model_path, std::string vs_path, std::string fs_path);
 		Object(std::string model_path, uint type, std::vector<mat4<float>>* matrices = NULL, uint method = UNIFORM_ARRAY);

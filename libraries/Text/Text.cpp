@@ -1,8 +1,6 @@
 #include "Text.hpp"
 
 std::vector<Text*> Text::stack;
-mat4<float> Text::canvasToClip;
-
 /*
 	Teste 1
 	Cada glifo salvo leva a largura abosuluta do glifo pela altura nominal(tamanho da fonte).
@@ -49,13 +47,17 @@ std::vector<std::string> Text::read(std::string path){
 	}
 }
 
-Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::string str, uint spacing, uint tab){
+Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::string str, GUI_PanelLayout inside, uint spacing, uint tab){
 	// - Init memebers
-	Text::stack.push_back(this);
+	GUI::stack.push_back(this);
+	type   = TEXT;
+	layout = inside;
+	setRatio(x, y, 0.0f, 0.0f);
 	fontSize   = px < 12? 12: px;
 	pxSpacing  = spacing;	
 	pxTab      = tab;
-	
+	ID = GUI::instancesCount++;
+
 	// - Init freetype
 	FT_Library ft;
 	if(FT_Init_FreeType(&ft)){
@@ -139,7 +141,7 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::
 
 	// - Prepare for reading OpenGL
 	uint indice  = 0;
-	uint offset  = 0;
+	uint iOffset  = 0;
 	std::vector<unsigned char> glyphBuffer(w_sizes[index_major_line] * (fontSize * strArray.size()), 0);
 
 	for(uint s = 0; s < strArray.size(); ++s){
@@ -148,25 +150,26 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::
 		for(uint rows = 0; rows < fontSize; ++rows){
 			for(it = text.begin(); it != text.end(); ++it){
 				indice += charMap[*it].bearingX + pxSpacing;
-				offset = indice;
+				iOffset = indice;
 				for(uint columns = 0; columns < charMap[*it].width; ++columns){
-					glyphBuffer[columns + offset] = charMap[*it].buffer[(rows * charMap[*it].width + columns)];
+					glyphBuffer[columns + iOffset] = charMap[*it].buffer[(rows * charMap[*it].width + columns)];
 					indice++;
 					// - Log output
 					// std::cout << ((uint)glyphBuffer[columns + offset] > 0.1? 1: 0);
 				}
-				offset = indice;
+				iOffset = indice;
 			}
 			// - Log output
 			// std::cout << std::endl;
 			indice += w_sizes[index_major_line] - w_sizes[s];
-			offset  = indice;
+			iOffset  = indice;
 		}
 	}
 
 	// - Log output
 	// std::cout << (SDL_GetTicks() / 1000.0f) - time_break << "s" << std::endl;
 
+	// headerHeight = resolution.h;
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glGenTextures(1, &texID);
 	glBindTexture(GL_TEXTURE_2D, texID);
@@ -175,24 +178,26 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	resolution.w = (float)w_sizes[index_major_line];
+	resolution.h = (float)fontSize * strArray.size();
 	genBuffers();
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	float w    = w_sizes[index_major_line];
-	float h    = fontSize * strArray.size();
-	float xpos = x * (ext_screen_width  - w) / 100.0f;
-	float ypos = y * (ext_screen_height - h) / 100.0f;
-	float vertices[6][4]{
-				{ xpos,     ypos + h,   0.0f, 0.0f },            
-	            { xpos,     ypos,       0.0f, 1.0f },
-	            { xpos + w, ypos,   	1.0f, 1.0f },
-	            { xpos,     ypos + h,   0.0f, 0.0f },
-	            { xpos + w, ypos,       1.0f, 1.0f },
-	            { xpos + w, ypos + h,   1.0f, 0.0f }  
+	float quad[6][4]{
+				{ position.x,  position.y + resolution.h, 0.0f, 0.0f},            
+	            { position.x,  position.y, 0.0f, 1.0f},
+	            { position.x + resolution.w, position.y,  1.0f, 1.0f},
+	            { position.x,  position.y + resolution.h, 0.0f, 0.0f},
+	            { position.x + resolution.w, position.y,  1.0f, 1.0f},
+	            { position.x + resolution.w, position.y + resolution.h, 1.0f, 0.0f}  
 			};
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
-	genShader("../shaders/ui/vs_render_quad.glsl", "../shaders/ui/fs_text.glsl");
-	setUniform3f("color", color);	
-	setUniformMat4f("projection", &Text::canvasToClip);
+
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad), quad);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	genShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_text.glsl");
+	setUniform1f("fOffsetX", &offset.x);
+	setUniform1f("fOffsetY", &offset.y);
+	setUniform3f("color", color);
 	addTexture(texID, "tex", 0);
 }
 
@@ -268,21 +273,8 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float>color, uint t
 	xabs         = position.x;
 
 	genBuffers();
-	genShader("../shaders/ui/vs_render_quad.glsl", "../shaders/ui/fs_text.glsl");
+	genShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_text.glsl");
 	setUniform3f("color", color);	
-	setUniformMat4f("projection", &Text::canvasToClip);
-}
-
-void Text::genBuffers(){
-	glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float) * 6 * 4, NULL, GL_DYNAMIC_DRAW);
-	glEnableVertexAttribArray(0);
-	glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 4 * sizeof(float), NULL);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
 }
 
 Text::~Text(){
@@ -295,9 +287,6 @@ void Text::free(){
 }
 
 void Text::write(std::string str){
-}
-
-void Text::updateCoordinates(){
 }
 
 void Text::render(std::string str){
@@ -348,8 +337,8 @@ void Text::render(){
 	glUseProgram(program);
 	glBindVertexArray(VAO);
 	initUnifSampler2D();
+	initUnif1f();
 	initUnif3f();
-	initUnifMat4f();
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);
 	glUseProgram(0);	
@@ -380,32 +369,34 @@ void Text::keyboardEvent(SDL_Event* event, std::string& str){
 	}
 }
 
-void Text::windowEvent(SDL_Event* event){
-	if(event->type == SDL_WINDOWEVENT){
-		if(event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED){
-			updateCoordinates();
-		}
-	}	
-}
-
 void Text::events(SDL_Event* event){
-	for(uint i = 0; i < stack.size(); ++i){
-		stack[i]->windowEvent(event);
-	}
+	// - Nothing to do...
 }
-
 
 void Text::setSpacing(uint px){
 	pxSpacing = px;
 }
 
-void Text::setPosition(float x, float y){
-	position = vec2<float>(x, y);
+void Text::picking(){
+	glBindVertexArray(VAO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, GUI::ubBinding, GUI::uboGUI);
+	glUniform3fv(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "ID"), 1, vec3<float>((float)ID / 256.0f).address());
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetX"), offset.x);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetY"), offset.y);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosY"), position.y);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeight"), resolution.h);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeaderHeight"), headerHeight);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
+	if(!childrens.empty()){
+		for(std::vector<GUI*>::iterator it = childrens.begin(); it != childrens.end(); ++it)
+			(*it)->picking();
+	}
 }
 
 void Text::renders(){
 	for(uint i = 0; i < stack.size(); ++i){
-		stack[i]->render();
+		// stack[i]->render();
 	}
 }
 

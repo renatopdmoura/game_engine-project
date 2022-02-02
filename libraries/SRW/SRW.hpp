@@ -76,7 +76,7 @@ public:
 		
 	//To programs [DONED]
 	static uint genProgramShader(std::string vs_path, std::string fs_path);
-	static uint genProgramShader(std::string vs_path, std::string fs_path, std::string gs_path);
+	static uint genProgramShader(std::string vs_path, std::string gs_path, std::string fs_path);
 	static void genProgramShaders();
 
 	//To buffers
@@ -122,7 +122,10 @@ public:
 	int searchUniformMat4f(std::string name);
 	
 	//Displays instance data on console [DONED]
-	static uint programs[3];
+	static uint programs[6];
+	#if RENDER_DEBUG_MODE
+		static uint debugPrograms[2];
+	#endif
 	static std::vector<uint> gUBO;
 	void info();
 protected:

@@ -1,15 +1,30 @@
 #include "Terrain.hpp"
 
+#if RENDER_DEBUG_MODE
+	void Terrain::renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar){
+		setProgram(SRW::debugPrograms[0]);
+		setUniform1f("zNear", zNear);
+		setUniform1f("zFar", zFar);
+		setUniformMat4f("model", &model);
+		setUniformMat4f("viewProj", &viewProj);
+	}
+	void Terrain::renderDebugNormal(mat4<float>& view, mat4<float>& projection){
+		setProgram(SRW::debugPrograms[1]);
+		setUniformMat4f("model", &model);	
+		setUniformMat4f("view", &view);
+		setUniformMat4f("projection", &projection);
+	}
+#endif
+
 Terrain::Terrain(const char* path, unsigned char bitsPerPixel, unsigned int width, unsigned int height, float hs, float bs){
 	heightScale     = hs;
 	blockScale      = bs;
 	heightmapWidth  = 0;
 	heightmapHeight = 0;
-	program = 0;
+	program = SRW::programs[TERRAIN_PROGRAM];
 	VAO 	= 0;
 	VBO 	= 0;
 	IBO 	= 0;
-	genShader("../shaders/terrain/vs.glsl", "../shaders/terrain/fs.glsl");
 	loadHeightMap(path, bitsPerPixel, width, height);
 	setUniformMat4f("model", &model);
 }
@@ -129,16 +144,15 @@ void Terrain::loadHeightMap(const char* path, unsigned char bitsPerPixel, unsign
 }
 
 void Terrain::render(){
-	glUseProgram(program);
 	glBindVertexArray(VAO);
 	for(uint i = 0; i < SRW::gUBO.size(); i++)
 		glBindBufferBase(GL_UNIFORM_BUFFER, i, SRW::gUBO[i]);
 	initUnifSampler2D();
+	initUnif1f();
 	initUnif3f();
 	initUnifMat4f();
 	// glUniformMatrix4fv(glGetUniformLocation(program, "normalSpace"), 1, GL_FALSE, &model.inverse().transpose()[0][0]);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
-	glUseProgram(0);
 }
 
 void Terrain::generateIndexBuffer(){
@@ -188,7 +202,7 @@ void Terrain::generateVertexBuffers(){
 	vec2<float> uv1, uv2, uv3;
 	vec3<float> edge1, edge2;
 	vec2<float> deltaUV1, deltaUV2;
-	for(uint i = 0; i < average; i += 3){
+	for(uint i = 0; i < posBuff.size(); i += 3){
 		p1  = posBuff[i];
 		p2  = posBuff[i + 1];
 		p3  = posBuff[i + 2];
@@ -199,7 +213,7 @@ void Terrain::generateVertexBuffers(){
 		edge2 = p3 - p1;
 		deltaUV1 = uv2 - uv1;
 		deltaUV2 = uv3 - uv1;
-		float f  = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+		float f  = (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y)? 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y): 0.0f;
 		vec3<float> tang;
 		tang.x = f * (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x);
 		tang.y = f * (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y);

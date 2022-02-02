@@ -14,7 +14,7 @@ private:
 public:
 	CommandLine(Material* mtl, Text& in);
 	void setMaterial(std::string command);
-	void setParameter(std::string);
+	void setParameter(std::string str);
 	void render(std::string str = std::string(""), uint timestamp = 1000);
 	void write(bool on);
 	Text* input;

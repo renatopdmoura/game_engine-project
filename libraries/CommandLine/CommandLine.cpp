@@ -177,10 +177,10 @@ void CommandLine::setMaterial(std::string command){
 
 }
 
-void CommandLine::setParameter(std::string){
-	//glClearColor
-	//GL_MULTISAMPLER
-	//glViewport
+void CommandLine::setParameter(std::string str){
+	if(str == "RENDER_DEBUG_DEPTH"){
+
+	}
 }
 
 void CommandLine::render(std::string str, uint timestamp){

@@ -3,7 +3,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "../libraries/stbi/stb_image.h"
 
-uint SRW::programs[] = {0, 0, 0};
+#if RENDER_DEBUG_MODE
+	uint SRW::debugPrograms[] = {0, 0};
+#endif
+
+uint SRW::programs[] = {0, 0, 0, 0, 0, 0};
 std::vector<uint> SRW::gUBO(3);
 
 //Generate a program variable that can shared between objects
@@ -49,9 +53,16 @@ uint SRW::genProgramShader(std::string vs_path, std::string gs_path, std::string
 }
 
 void SRW::genProgramShaders(){
-	programs[0] = genProgramShader("../shaders/object/vs.glsl", "../shaders/object/fs_uniform_color.glsl");
-	programs[1] = genProgramShader("../shaders/object/vs.glsl", "../shaders/object/fs_textured.glsl");
-	programs[2] = genProgramShader("../shaders/new/vs.glsl", "../shaders/new/fs.glsl");
+	SRW::programs[UNIFORM_COLOR]   = SRW::genProgramShader("../shaders/object/vs.glsl", "../shaders/object/fs_uniform_color.glsl");
+	SRW::programs[TEXTURIZED]      = SRW::genProgramShader("../shaders/object/vs.glsl", "../shaders/object/fs_textured.glsl");
+	SRW::programs[TEXT_PROGRAM]    = SRW::genProgramShader("../shaders/new/vs.glsl", "../shaders/new/fs.glsl");
+	SRW::programs[TERRAIN_PROGRAM] = SRW::genProgramShader("../shaders/terrain/vs.glsl", "../shaders/terrain/fs.glsl");
+	SRW::programs[GUI_PROGRAM]     = SRW::genProgramShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_gui.glsl");
+	SRW::programs[GUI_PANEL_PROG]  = SRW::genProgramShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_panel.glsl");
+	#if RENDER_DEBUG_MODE
+		debugPrograms[0] = SRW::genProgramShader("../shaders/debug/vs_debug.glsl", "../shaders/debug/fs_debug_depth.glsl");
+		debugPrograms[1] = SRW::genProgramShader("../shaders/debug/vs_debug_normal.glsl", "../shaders/debug/gs_debug_normal.glsl", "../shaders/debug/fs_debug_normal.glsl");
+	#endif
 }
 
 void SRW::genShader(std::string vs_path, std::string fs_path){
@@ -123,7 +134,7 @@ void SRW::sharedUniforms(mat4<float>& viewProj, vec3<float>& cameraPos, bool upd
 		uint prog = SRW::programs[TEXTURIZED];
 		uint blockIndex = glGetUniformBlockIndex(prog, "Var");
 		if(blockIndex == GL_INVALID_INDEX)
-			std::cerr << "ERROR::Uniformblock name is not have a valid index!" << std::endl;
+			std::cerr << "ERROR::Uniformblock <Var> is not have a valid index!" << std::endl;
 		else{
 			int blockSize = -1;
 			glGetActiveUniformBlockiv(prog, blockIndex, GL_UNIFORM_BLOCK_DATA_SIZE, &blockSize);
@@ -157,7 +168,7 @@ void SRW::sharedUniforms(mat4<float>& viewProj, vec3<float>& cameraPos, bool upd
 						vec4<float>(ptr[16], ptr[17], ptr[18], ptr[19]).show("cameraPos");
 
 					}
-					delete[] buffer;
+					delete[] buffer;//?????
 				}
 				glBindBuffer(GL_UNIFORM_BUFFER, 0);
 			}
@@ -232,8 +243,8 @@ void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std
 			}
 			file.close();
 		}
-		SRW::genProgramShaders();
 	}
+	SRW::genProgramShaders();
 	//- Obtém o bloco uniforme de um programa para determinar os deslocamentos dos dados dentro do bloco uniforme
 	//- Note que qualquer programa que contenha o bloco uniforme esperado pode ser tomado por base para as operações
 	//- Por questões de projeto, o ponto de ligação 0 corresponde ao armazenamento de luzes
@@ -246,10 +257,7 @@ void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std
 	std::vector<uint> uniformBlockIndex(3);
 	std::vector<uint> uniformBlockMemberIndex;
 	std::vector<int> uniformBlockSize(uniformBlockName.size());
-	unsigned char* pointLightBuffer = NULL;
-	unsigned char* spotLightBuffer  = NULL;
-	unsigned char* sunLightBuffer   = NULL;
-
+	
 	for(uint j = 0; j < uniformBlockName.size(); ++j){
 		uniformBlockIndex[j] = glGetUniformBlockIndex(prog, uniformBlockName[j].c_str());
 		if(uniformBlockIndex[j] == GL_INVALID_INDEX)
@@ -262,113 +270,113 @@ void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std
 			else{
 				switch(j){
 					case 0:
-					if(pointLightArray != NULL){
-						pointLightBuffer = new unsigned char[uniformBlockSize[j]];
-						uniformBlockMemberIndex.resize(uniformBlockCountMembers[j]);
-						glGetUniformIndices(prog, uniformBlockCountMembers[j], pointLightMemberName, &uniformBlockMemberIndex[0]);
-						for(uint index = 0; index < uniformBlockCountMembers[j]; ++index){
-							switch(uniformBlockMemberIndex[index]){
-								case GL_INVALID_INDEX:
-									std::cerr << pointLightMemberName[index] << " is not a program variable shader or is not active!" << std::endl;
-									exit(1);
-									break;
-							}
-						}
-						std::vector<int> offset(uniformBlockCountMembers[j]);
-						glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
-						for(uint i = 0; i < pointLightArray->size(); ++i){
-							std::memcpy(pointLightBuffer + offset[0] + (sizeof(vec4<float>) * i), &(*pointLightArray)[i].position, sizeof(vec4<float>));
-							std::memcpy(pointLightBuffer + offset[1] + (sizeof(vec4<float>) * i), &(*pointLightArray)[i].color, sizeof(vec4<float>));
-						}
-						// SRW::gUBO.push_back(0);
-						glGenBuffers(1, &SRW::gUBO[j]);
-						glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
-						glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], pointLightBuffer, GL_DYNAMIC_DRAW);
-						if(false){
-							float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
-							if(ptr != NULL){
-								for(uint i = 0; i < uniformBlockSize[j] / sizeof(float); i += 4){
-									vec4<float>(ptr[i], ptr[(i + 1)], ptr[(i + 2)], ptr[(i + 3)]).show("point");
+						if(pointLightArray != NULL){
+							unsigned char* pointLightBuffer = new unsigned char[uniformBlockSize[j]];
+							uniformBlockMemberIndex.resize(uniformBlockCountMembers[j]);
+							glGetUniformIndices(prog, uniformBlockCountMembers[j], pointLightMemberName, &uniformBlockMemberIndex[0]);
+							for(uint index = 0; index < uniformBlockCountMembers[j]; ++index){
+								switch(uniformBlockMemberIndex[index]){
+									case GL_INVALID_INDEX:
+										std::cerr << pointLightMemberName[index] << " is not a program variable shader or is not active!" << std::endl;
+										exit(1);
+										break;
 								}
 							}
-							glUnmapBuffer(GL_UNIFORM_BUFFER);
+							std::vector<int> offset(uniformBlockCountMembers[j]);
+							glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
+							for(uint i = 0; i < pointLightArray->size(); ++i){
+								std::memcpy(pointLightBuffer + offset[0] + (sizeof(vec4<float>) * i), &(*pointLightArray)[i].position, sizeof(vec4<float>));
+								std::memcpy(pointLightBuffer + offset[1] + (sizeof(vec4<float>) * i), &(*pointLightArray)[i].color, sizeof(vec4<float>));
+							}
+							// SRW::gUBO.push_back(0);
+							glGenBuffers(1, &SRW::gUBO[j]);
+							glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
+							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], pointLightBuffer, GL_DYNAMIC_DRAW);
+							if(false){
+								float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
+								if(ptr != NULL){
+									for(uint i = 0; i < uniformBlockSize[j] / sizeof(float); i += 4){
+										vec4<float>(ptr[i], ptr[(i + 1)], ptr[(i + 2)], ptr[(i + 3)]).show("point");
+									}
+								}
+								glUnmapBuffer(GL_UNIFORM_BUFFER);
+							}
+							glBindBuffer(GL_UNIFORM_BUFFER, 0);
+							delete[] pointLightBuffer;
 						}
-						glBindBuffer(GL_UNIFORM_BUFFER, 0);
-					}
 					break;
 					case 1:
-					if(spotLightArray != NULL){
-						spotLightBuffer = new unsigned char[uniformBlockSize[j]];
-						uniformBlockMemberIndex.resize(uniformBlockCountMembers[j]);
-						glGetUniformIndices(prog, uniformBlockCountMembers[j], spotLightMemberName, &uniformBlockMemberIndex[0]);
-						for(uint index = 0; index < uniformBlockCountMembers[j]; ++index){
-							switch(uniformBlockMemberIndex[index]){
-								case GL_INVALID_INDEX:
-									std::cerr << spotLightMemberName[index] << " is not a program variable shader or is not active!" << std::endl;
-									exit(1);
-									break;
-							}
-						}
-						std::vector<int> offset(uniformBlockCountMembers[j]);
-						glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
-						for(uint i = 0; i < spotLightArray->size(); ++i){
-							std::memcpy(spotLightBuffer + offset[0] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].direction, sizeof(vec4<float>));
-							std::memcpy(spotLightBuffer + offset[1] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].position, sizeof(vec4<float>));
-							std::memcpy(spotLightBuffer + offset[2] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].color, sizeof(vec4<float>));
-						}
-						// SRW::gUBO.push_back(0);
-						glGenBuffers(1, &SRW::gUBO[j]);
-						glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
-						glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], spotLightBuffer, GL_DYNAMIC_DRAW);
-						if(false){
-							float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
-							if(ptr != NULL){
-								for(uint i = 0; i < uniformBlockSize[j] / sizeof(float); i += 4){
-									vec4<float>(ptr[i], ptr[(i + 1)], ptr[(i + 2)], ptr[(i + 3)]).show("spot");
+						if(spotLightArray != NULL){
+							unsigned char* spotLightBuffer = new unsigned char[uniformBlockSize[j]];
+							uniformBlockMemberIndex.resize(uniformBlockCountMembers[j]);
+							glGetUniformIndices(prog, uniformBlockCountMembers[j], spotLightMemberName, &uniformBlockMemberIndex[0]);
+							for(uint index = 0; index < uniformBlockCountMembers[j]; ++index){
+								switch(uniformBlockMemberIndex[index]){
+									case GL_INVALID_INDEX:
+										std::cerr << spotLightMemberName[index] << " is not a program variable shader or is not active!" << std::endl;
+										exit(1);
+										break;
 								}
 							}
-							glUnmapBuffer(GL_UNIFORM_BUFFER);
+							std::vector<int> offset(uniformBlockCountMembers[j]);
+							glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
+							for(uint i = 0; i < spotLightArray->size(); ++i){
+								std::memcpy(spotLightBuffer + offset[0] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].direction, sizeof(vec4<float>));
+								std::memcpy(spotLightBuffer + offset[1] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].position, sizeof(vec4<float>));
+								std::memcpy(spotLightBuffer + offset[2] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].color, sizeof(vec4<float>));
+							}
+							// SRW::gUBO.push_back(0);
+							glGenBuffers(1, &SRW::gUBO[j]);
+							glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
+							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], spotLightBuffer, GL_DYNAMIC_DRAW);
+							if(false){
+								float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
+								if(ptr != NULL){
+									for(uint i = 0; i < uniformBlockSize[j] / sizeof(float); i += 4){
+										vec4<float>(ptr[i], ptr[(i + 1)], ptr[(i + 2)], ptr[(i + 3)]).show("spot");
+									}
+								}
+								glUnmapBuffer(GL_UNIFORM_BUFFER);
+							}
+							glBindBuffer(GL_UNIFORM_BUFFER, 0);
+							delete[] spotLightBuffer;
 						}
-						glBindBuffer(GL_UNIFORM_BUFFER, 0);
-					}
 					break;
 					case 2:
-					if(sun != NULL){
-						sunLightBuffer = new unsigned char[uniformBlockSize[j]];
-						uniformBlockMemberIndex.resize(uniformBlockCountMembers[j]);
-						glGetUniformIndices(prog, uniformBlockCountMembers[j], sunLightMemberName, &uniformBlockMemberIndex[0]);
-						for(uint index = 0; index < uniformBlockCountMembers[j]; ++index){
-							switch(uniformBlockMemberIndex[index]){
-								case GL_INVALID_INDEX:
-									std::cerr << sunLightMemberName[index] << " is not a program variable shader or is not active!" << std::endl;
-									exit(1);
-									break;
-							}
-						}
-						std::vector<int> offset(uniformBlockCountMembers[j]);
-						glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
-						std::memcpy(sunLightBuffer + offset[0] + sizeof(vec4<float>), &sun->direction, sizeof(vec4<float>));
-						std::memcpy(sunLightBuffer + offset[1] + sizeof(vec4<float>), &sun->color, sizeof(vec4<float>));
-						// SRW::gUBO.push_back(0);
-						glGenBuffers(1, &SRW::gUBO[j]);
-						glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
-						glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], sun, GL_DYNAMIC_DRAW);
-						if(false){
-							float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
-							if(ptr != NULL){
-								for(uint i = 0; i < uniformBlockSize[j] / sizeof(float); i += 4){
-									vec4<float>(ptr[i], ptr[(i + 1)], ptr[(i + 2)], ptr[(i + 3)]).show("sun");
+						if(sun != NULL){
+							unsigned char* sunLightBuffer = new unsigned char[uniformBlockSize[j]];
+							uniformBlockMemberIndex.resize(uniformBlockCountMembers[j]);
+							glGetUniformIndices(prog, uniformBlockCountMembers[j], sunLightMemberName, &uniformBlockMemberIndex[0]);
+							for(uint index = 0; index < uniformBlockCountMembers[j]; ++index){
+								switch(uniformBlockMemberIndex[index]){
+									case GL_INVALID_INDEX:
+										std::cerr << sunLightMemberName[index] << " is not a program variable shader or is not active!" << std::endl;
+										exit(1);
+										break;
 								}
 							}
-							glUnmapBuffer(GL_UNIFORM_BUFFER);
+							std::vector<int> offset(uniformBlockCountMembers[j]);
+							glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
+							std::memcpy(sunLightBuffer + offset[0] + sizeof(vec4<float>), &sun->direction, sizeof(vec4<float>));
+							std::memcpy(sunLightBuffer + offset[1] + sizeof(vec4<float>), &sun->color, sizeof(vec4<float>));
+							// SRW::gUBO.push_back(0);
+							glGenBuffers(1, &SRW::gUBO[j]);
+							glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
+							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], sun, GL_DYNAMIC_DRAW);
+							if(false){
+								float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
+								if(ptr != NULL){
+									for(uint i = 0; i < uniformBlockSize[j] / sizeof(float); i += 4){
+										vec4<float>(ptr[i], ptr[(i + 1)], ptr[(i + 2)], ptr[(i + 3)]).show("sun");
+									}
+								}
+								glUnmapBuffer(GL_UNIFORM_BUFFER);
+							}
+							glBindBuffer(GL_UNIFORM_BUFFER, 0);
+							delete[] sunLightBuffer;
 						}
-						glBindBuffer(GL_UNIFORM_BUFFER, 0);
-					}
 					break;
 				}
-				delete[] pointLightBuffer;
-				delete[] spotLightBuffer;
-				delete[] sunLightBuffer;
 			}
 		}
 	}
@@ -463,6 +471,10 @@ void SRW::initUnifMat4f(){
 
 //SECTION: Setters to uniform instaces
 void SRW::setUniform1b(std::string name, bool value){
+	std::vector<uniform1b>::const_iterator it = unif1b.begin();
+	int index = searchUniform1b(name);
+	if(index != -1)
+		unif1b.erase(it + index);
 	unif1b.push_back(uniform1b(name, value));
 	unif1b.back().location = glGetUniformLocation(program, unif1b.back().label.c_str());
 	if(unif1b.back().location == -1){
@@ -471,6 +483,10 @@ void SRW::setUniform1b(std::string name, bool value){
 }
 
 void SRW::setUniform1f(std::string name, float value){
+	std::vector<uniform1f>::const_iterator it = unif1f.begin();
+	int index = searchUniform1f(name);
+	if(index != -1)
+		unif1f.erase(it + index);
 	unif1f.push_back(uniform1f(name, value));
 	unif1f.back().location = glGetUniformLocation(program, unif1f.back().label.c_str());
 	if(unif1f.back().location == -1){
@@ -479,6 +495,10 @@ void SRW::setUniform1f(std::string name, float value){
 }
 
 void SRW::setUniform1f(std::string name, float* value){
+	std::vector<uniform1f>::const_iterator it = unif1f.begin();
+	int index = searchUniform1f(name);
+	if(index != -1)
+		unif1f.erase(it + index);
 	unif1f.push_back(uniform1f(name, value));
 	unif1f.back().location = glGetUniformLocation(program, unif1f.back().label.c_str());
 	if(unif1f.back().location == -1){
@@ -487,6 +507,10 @@ void SRW::setUniform1f(std::string name, float* value){
 }
 
 void SRW::setUniform3f(std::string name, vec3f value){
+	std::vector<uniform3f>::const_iterator it = unif3f.begin();
+	int index = searchUniform3f(name);
+	if(index != -1)
+		unif3f.erase(it + index);
 	unif3f.push_back(uniform3f(name, value));
 	unif3f.back().location = glGetUniformLocation(program, unif3f.back().label.c_str());
 	if(unif3f.back().location == -1){
@@ -495,6 +519,10 @@ void SRW::setUniform3f(std::string name, vec3f value){
 }
 
 void SRW::setUniform3f(std::string name, vec3f* value){
+	std::vector<uniform3f>::const_iterator it = unif3f.begin();
+	int index = searchUniform3f(name);
+	if(index != -1)
+		unif3f.erase(it + index);
 	unif3f.push_back(uniform3f(name, value));
 	unif3f.back().location = glGetUniformLocation(program, unif3f.back().label.c_str());
 	if(unif3f.back().location == -1){
@@ -503,6 +531,10 @@ void SRW::setUniform3f(std::string name, vec3f* value){
 }
 
 void SRW::setUniformMat4f(std::string name, mat4<float>* value){
+	std::vector<uniformMat4f>::const_iterator it = unifMat4f.begin();
+	int index = searchUniformMat4f(name);
+	if(index != -1)
+		unifMat4f.erase(it + index);
 	unifMat4f.push_back(uniformMat4f(name, value));
 	unifMat4f.back().location = glGetUniformLocation(program, unifMat4f.back().label.c_str());
 	if(unifMat4f.back().location == -1){
@@ -600,10 +632,8 @@ int SRW::searchUniformSampler2D(std::string name){
 			return i;
 		}
 	}
-	else{
-		std::cout << name << " in std::vector sampler2D is not found!" << std::endl;
-		return -1;
-	}
+	std::cout << name << " in std::vector sampler2D is not found!" << std::endl;
+	return -1;
 }
 
 int SRW::searchUniform1b(std::string name){
@@ -619,10 +649,8 @@ int SRW::searchUniform1b(std::string name){
 			return i;
 		}
 	}
-	else{
-		std::cout << name << " in std::vector unif1b is not found!" << std::endl;
-		return -1;
-	}
+	std::cout << name << " in std::vector unif1b is not found!" << std::endl;
+	return -1;
 }
 
 int SRW::searchUniform1f(std::string name){
@@ -638,10 +666,8 @@ int SRW::searchUniform1f(std::string name){
 			return i;
 		}
 	}
-	else{
-		std::cout << name << " in std::vector unif1f is not found!" << std::endl;
-		return -1;
-	}
+	std::cout << name << " in std::vector unif1f is not found!" << std::endl;
+	return -1;
 }
 
 int SRW::searchUniform3f(std::string name){
@@ -657,10 +683,8 @@ int SRW::searchUniform3f(std::string name){
 			return i;
 		}
 	}
-	else{
-		std::cout << name << " in std::vector unif3f is not found!" << std::endl;
-		return -1;
-	}
+	std::cout << name << " in std::vector unif3f is not found!" << std::endl;
+	return -1;
 }
 
 int SRW::searchUniformMat4f(std::string name){
@@ -676,10 +700,8 @@ int SRW::searchUniformMat4f(std::string name){
 			return i;
 		}
 	}
-	else{
-		std::cout << name << " in std::vector unifMat4f is not found!" << std::endl;
-		return -1;
-	}
+	std::cout << name << " in std::vector unifMat4f is not found!" << std::endl;
+	return -1;
 }
 
 //SECTION: Instance information
