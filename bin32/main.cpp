@@ -4,26 +4,30 @@
 #include "../libraries/Object/Object.hpp"
 #include "../libraries/Terrain/Terrain.hpp"
 #include "../libraries/Quad/Quad.hpp"
+
 #include "../libraries/Text/Text.hpp"
 #include "../libraries/GUI/Panel.hpp"
+#include "../libraries/GUI/Checkbox.hpp"
 
 #include "../libraries/Datatype/Datatype.hpp"
 #include "../libraries/CommandLine/CommandLine.hpp"
 
 #include <sstream>
+
 bool QUIT             = false;
 bool LOCKEDMOTION     = false;
 bool COMMANDLINE      = false;
 bool SENDCOMMANDLINE  = false;
 bool DEBUG_DEPTH      = false;
 bool DEBUG_NORMAL     = false;
+bool DEBUG_GUI        = false;
 bool SHOWREADME       = false;
 int FRAME_PER_SECOND  = 60.0f;
 int FRAME_TIME        = 1000.0f / FRAME_PER_SECOND;
 
 int main(int argv, char** args){
-	if(initialize("Labs", 1366, 768)){
-		// glEnable(GL_MULTISAMPLE);
+	if(initialize("Labs", 1366, 768, false)){
+		glEnable(GL_MULTISAMPLE);
 		glEnable(GL_CULL_FACE);
 		glFrontFace(GL_CCW);
 		glCullFace(GL_BACK);
@@ -51,7 +55,6 @@ int main(int argv, char** args){
 		Material mtl000 = {vec3<float>(1.0f), 1.0f, 0.0f, 1.0f};
 
 		SRW::sharedUniforms(fpsCam.getViewAndProjectionMatrix(), fpsCam.getPosition(), &sun, &pointLightArray, &spotLightArray);
-		GUI::guiUniformBuffer();
 
 		Terrain terrain("../assets/textures/terrain/maps/heightmap000.r8", 8, 256, 256, 40.0f, 2.0f);
 		terrain.addTexture("../assets/textures/terrain/snow_02_diff_1k.jpg", "material.albedo[0]", 0);
@@ -78,13 +81,6 @@ int main(int argv, char** args){
 		obj000.setUniform1f("material.metallic", &mtl000.metallic);
 		obj000.setUniform1f("material.ao", &mtl000.ao);
 		Object::stack.pop_back();
-		
-		Object obj001("../models/tree/birch_tree.obj", UNIFORM_COLOR);
-		obj001.getModel() = scale(vec3<float>(4.0f));
-		obj001.setUniform3f("material.albedo", &mtl000.albedo);
-		obj001.setUniform1f("material.roughness", &mtl000.roughness);
-		obj001.setUniform1f("material.metallic", &mtl000.metallic);
-		obj001.setUniform1f("material.ao", &mtl000.ao);
 
 		Object obj002("../models/basic/icosphere.obj", TEXTURIZED);
 		obj002.getModel() = scale(vec3<float>(1.0f, 1.0f, 1.0f)) * translate(vec3<float>(0.0f, 2.0f, 0.0f));
@@ -94,45 +90,114 @@ int main(int argv, char** args){
 		obj002.addTexture("../assets/textures/terrain/wood_table_001_ao_1k.jpg", "material.ao", 3);
 		obj002.setUniform1f("material.metallic", &mtl000.metallic);
 
-		std::vector<mat4<float>> arrayColumns;
-		arrayColumns.push_back(scale(vec3<float>(30.0f)) * rotateY(45.0f) * translate(vec3<float>(-170, -6.0f, -50)));
-		Object obj003("../models/ruins/stone.obj", TEXTURIZED, &arrayColumns, UNIFORM_BLOCK);
+		// std::vector<mat4<float>> arrayColumns;
+		// arrayColumns.push_back(scale(vec3<float>(30.0f)) * rotateY(45.0f) * translate(vec3<float>(-170, -6.0f, -50)));
+		Object obj003("../models/ruins/stone.obj", TEXTURIZED);
+		obj003.getModel() = scale(vec3<float>(30.0f)) * rotateY(45.0f) * translate(vec3<float>(-170, -6.0f, -50));
 		obj003.addTexture("../assets/textures/terrain/rock_wall_02_diff_1k.jpg", "material.albedo", 0);
 		obj003.addTexture("../assets/textures/terrain/rock_wall_02_nor_gl_1k.jpg", "material.normal", 1);
 		obj003.addTexture("../assets/textures/terrain/rock_wall_02_rough_1k.jpg", "material.roughness", 2);
 		obj003.addTexture("../assets/textures/terrain/rock_wall_02_ao_1k.jpg", "material.ao", 3);
 		obj003.setUniform1f("material.metallic", &mtl000.metallic);
-		Object::stack.pop_back();
 		Object::completeness();
 		std::cout << "[Models loaded]\n" << std::endl;
+		
 		// - GUI Object creation
+		GUI::guiUniformBuffer();
+		Text fpsMeter("../assets/fonts/Humnst777.ttf", 24.0f, 0.0f, 700.0f, vec3<float>(0.0f, 1.0f, 0.0f), COUNTER);
 		Text cmdTxtIn("../assets/fonts/Humnst777.ttf", 24.0f, 2.0f, 20.0f, vec3<float>(1.0f), DYNAMIC);
 		CommandLine cmd(&mtl000, cmdTxtIn);
+
+		Panel panel000(50.0f, 50.0f, 20.0f, 45.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec4<float>(0.65f, 0.34f, 0.2f), vec4<float>(0.2f, 0.2f, 0.2f));
+		panel000.addTexture("../assets/textures/alpha/ranger.bmp", "img", 0);
+		Text title000("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 50.0f, vec3<float>(0.9f), "PANEL000", ON_HEADER);
+		Text txtTex0("../assets/fonts/Humnst777.ttf", 12.0f, 20.0f, 3.0f, vec3<float>(0.9f), "TEX0", ON_BODY);
+		Text txtTex1("../assets/fonts/Humnst777.ttf", 12.0f, 92.0f, 3.0f, vec3<float>(0.9f), "TEX1", ON_BODY);
+		
+		Checkbox cbxPinPanel000(98.0f, 50.0f, ON_HEADER);
+		Checkbox cbxTex0(10.0f, 2.0f, ON_BODY);
+		Checkbox cbxTex1(80.0f, 2.0f, ON_BODY);
+
+		Group groupTexOptions;
+		groupTexOptions.checkbox.push_back(&cbxTex0);
+		groupTexOptions.checkbox.push_back(&cbxTex1);
+
+		title000.setUserEvent([&](){
+			panel000.setHidden(true);
+		});
+		cbxPinPanel000.setUserEvent([&](){
+			cbxPinPanel000.setOn(!cbxPinPanel000.getOn());
+			panel000.setPin(!panel000.getPin());
+		});
+		cbxTex0.setUserEvent([&](){
+			groupTexOptions.doUnique(cbxTex0.getID());
+			cbxTex0.setOn(!cbxTex0.getOn());
+			if(cbxTex0.getOn())
+				panel000.addTexture("../assets/textures/brick_wall/yellow_bricks_diff_1k.jpg", "img", 0);
+			else
+				panel000.addTexture("../assets/textures/alpha/ranger.bmp", "img", 0);
+		});
+		cbxTex1.setUserEvent([&](){
+			groupTexOptions.doUnique(cbxTex1.getID());
+			cbxTex1.setOn(!cbxTex1.getOn());
+			if(cbxTex1.getOn())
+				panel000.addTexture("../assets/textures/brick_wall/yellow_bricks_nor_gl_2k.jpg", "img", 0);
+			else
+				panel000.addTexture("../assets/textures/alpha/ranger.bmp", "img", 0);
+		});
+
+		panel000.push(&cbxPinPanel000);
+		panel000.push(&title000);
+		panel000.push(&txtTex0);
+		panel000.push(&txtTex1);
+		panel000.push(&cbxTex0);
+		panel000.push(&cbxTex1);
+
 		// - <x, y, w, h, thickness, backgroundColor, headerColor, borderColor, layout> 
 		Panel panelTools(98.0f, 98.0f, 20.0f, 65.0f, 2.0f, vec4<float>(0.2f, 0.19f, 0.2f), vec4<float>(0.45f, 0.36f, 0.2f), vec4<float>(0.2f, 0.2f, 0.2f));
-		Panel panelDebug(50.0f, 100.0f, 100.0f, 80.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f, 0.8f), vec4<float>(0.65f, 0.2f, 0.2f), vec4<float>(0.0f), ON_BODY);
-		Panel panelWindow(50.0f, 0.0f, 100.0f, 20.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec4<float>(0.65f, 0.34f, 0.2f), vec4<float>(0.0f), ON_BODY);
-		// - <path, fontSize, x, y,, fontColor, name, layout> 
-		Text titleTools("../assets/fonts/Humnst777.ttf", 18.0f, 4.0f, 50.0f, vec3<float>(0.9f), "TOOLS", ON_HEADER);
-		Text titleDebug("../assets/fonts/Humnst777.ttf", 18.0f, 4.0f, 50.0f, vec3<float>(0.9f), "DEBUG", ON_HEADER);
-		Text titleWindow("../assets/fonts/Humnst777.ttf", 18.0f, 4.0f, 50.0f, vec3<float>(0.9f), "WINDOW", ON_HEADER);	
-		Text option000("../assets/fonts/Humnst777.ttf", 18.0f, 98.0f, 50.0f, vec3<float>(0.9f), "HIDEN", ON_HEADER);
-		Text option001("../assets/fonts/Humnst777.ttf", 18.0f, 8.0f, 96.0f, vec3<float>(0.9f), "DEBUG DEPTH", ON_BODY);
-		Text option002("../assets/fonts/Humnst777.ttf", 18.0f, 8.0f, 86.0f, vec3<float>(0.9f), "DEBUG NORMAL", ON_BODY);
-		Text terminate("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 50.0f, vec3<float>(0.9f), "TERMINATE", ON_BODY);
-		Text help("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 50.0f, vec3<float>(0.9f), "help.txt");
-		Text fpsMeter("../assets/fonts/Humnst777.ttf", 24.0f, 0.0f, 700.0f, vec3<float>(0.0f, 1.0f, 0.0f), COUNTER);
+		Panel panelDebug(50.0f, 100.0f, 100.0f, 40.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec4<float>(0.65f, 0.2f, 0.2f), vec4<float>(0.0f), ON_BODY);
+		Panel panelWindow(50.0f, 0.0f, 100.0f, 60.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec4<float>(0.65f, 0.34f, 0.2f), vec4<float>(0.0f), ON_BODY);
+		Panel panelHelp(2.0f, 98.0f, 30.0f, 60.0f, 6.0f, vec4<float>(0.2f, 0.19f, 0.22f), vec4<float>(0.65f, 0.34f, 0.2f), vec4<float>(0.0f));
+		// - <path, fontSize, x, y, fontColor, name, layout> 
+		Text titleTools("../assets/fonts/Humnst777.ttf", 18.0f, 2.0f, 50.0f, vec3<float>(0.9f), "TOOLS", ON_HEADER);
+		Text hidden("../assets/fonts/Humnst777.ttf", 18.0f, 96.0f, 50.0f, vec3<float>(0.9f), "HIDEN", ON_HEADER);
+		// - Panel Debug options
+		Text titleDebug("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 50.0f, vec3<float>(0.9f), "DEBUG", ON_HEADER);
+		Text debugDepth("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 90.0f, vec3<float>(0.9f), "DEBUG DEPTH", ON_BODY);
+		Text debugNormal("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 70.0f, vec3<float>(0.9f), "DEBUG NORMAL", ON_BODY);
+		Text debugGUI("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 50.0f, vec3<float>(0.9f), "DEBUG GUI", ON_BODY);
+		Text shaders("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 30.0f, vec3<float>(0.9f), "GGX", ON_BODY);
+		// - Panel Window options
+		Text titleWindow("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 50.0f, vec3<float>(0.9f), "WINDOW", ON_HEADER);	
+		Text wh1280x720("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 90.0f, vec3<float>(0.9f), "1280X720", ON_BODY);		
+		Text wh1366x768("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 80.0f, vec3<float>(0.9f), "1366X768", ON_BODY);		
+		Text wh1400x1050("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 70.0f, vec3<float>(0.9f), "1400X1050", ON_BODY);		
+		Text wh1600x900("../assets/fonts/Humnst777.ttf", 18.0f, 0.0f, 60.0f, vec3<float>(0.9f), "1600X900", ON_BODY);		
+		Text terminate("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 5.0f, vec3<float>(0.9f), "TERMINATE", ON_BODY);
+		// - Panel help
+		Text titleHelp("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 50.0f, vec3<float>(0.9f), "HELP", ON_HEADER);	
+		Text help("../assets/fonts/Humnst777.ttf", 18.0f, 50.0f, 90.0f, vec3<float>(0.9f), "help.txt", ON_BODY);
+
+		Checkbox cbxDebugDepth(100.0f, 90.0f);
+		Checkbox cbxDebugNormal(100.0f, 70.0f);
+		Checkbox cbxDebugGUI(100.0f, 50.0f);
+
+		Group cbxGroup;
+		cbxGroup.checkbox.push_back(&cbxDebugDepth);
+		cbxGroup.checkbox.push_back(&cbxDebugNormal);
+		cbxGroup.checkbox.push_back(&cbxDebugGUI);
 
 		// - Action event
-		help.setHidden(true);
-		titleTools.setUserEvent([&](){
-			help.setHidden(!help.getHidden());
-		});
-		option000.setUserEvent([&](){
-			panelTools.setHidden(true);
-			help.setHidden(true);
-		});
-		option001.setUserEvent([&](){
+		cbxDebugDepth.setUserEvent([&](){
+			cbxGroup.doUnique(cbxDebugDepth.getID());
+			if(!cbxDebugDepth.getOn()){
+				cbxDebugDepth.setOn(true);
+				cbxDebugDepth.setBackgroundColor(vec4<float>(1.0f, 1.0f, 1.0f));
+			}
+			else if(cbxDebugDepth.getOn()){
+				cbxDebugDepth.setOn(false);
+				cbxDebugDepth.setBackgroundColor(vec4<float>(0.6f, 0.6f, 0.6f));
+			}
 			#if RENDER_DEBUG_MODE
 				DEBUG_NORMAL = false;
 				if(!DEBUG_DEPTH){
@@ -144,7 +209,16 @@ int main(int argv, char** args){
 					DEBUG_DEPTH = false;
 			#endif
 		});
-		option002.setUserEvent([&](){
+		cbxDebugNormal.setUserEvent([&](){
+			cbxGroup.doUnique(cbxDebugNormal.getID());
+			if(!cbxDebugNormal.getOn()){
+				cbxDebugNormal.setOn(true);
+				cbxDebugNormal.setBackgroundColor(vec4<float>(1.0f, 1.0f, 1.0f));
+			}
+			else if(cbxDebugNormal.getOn()){
+				cbxDebugNormal.setOn(false);
+				cbxDebugNormal.setBackgroundColor(vec4<float>(0.6f, 0.6f, 0.6f));
+			}
 			#if RENDER_DEBUG_MODE
 				DEBUG_DEPTH = false;
 				if(!DEBUG_NORMAL){
@@ -156,19 +230,72 @@ int main(int argv, char** args){
 					DEBUG_NORMAL = false;
 			#endif
 		});
+		cbxDebugGUI.setUserEvent([&](){
+			cbxGroup.doUnique(cbxDebugGUI.getID());
+			if(!cbxDebugGUI.getOn()){
+				cbxDebugGUI.setOn(true);
+				cbxDebugGUI.setBackgroundColor(vec4<float>(1.0f, 1.0f, 1.0f));
+			}
+			else if(cbxDebugGUI.getOn()){
+				cbxDebugGUI.setOn(false);
+				cbxDebugGUI.setBackgroundColor(vec4<float>(0.6f, 0.6f, 0.6f));
+			}
+			DEBUG_GUI = !DEBUG_GUI;
+		});	
+
+		panelHelp.setHidden(true);
+		titleTools.setUserEvent([&](){
+			panelHelp.setHidden(!panelHelp.getHidden());
+		});
+		hidden.setUserEvent([&](){
+			panelTools.setHidden(true);
+			help.setHidden(true);
+		});
+		shaders.setUserEvent([&](){
+			DEBUG_DEPTH  = false;
+			DEBUG_NORMAL = false;
+		});
+		// - Window panel
+		wh1280x720.setUserEvent([&](){
+			SDL_SetWindowSize(ext_window, 1280, 720);
+		});
+		wh1366x768.setUserEvent([&](){
+			SDL_SetWindowSize(ext_window, 1366, 768);
+		});
+		wh1400x1050.setUserEvent([&](){
+			SDL_SetWindowSize(ext_window, 1400, 1050);
+		});
+		wh1600x900.setUserEvent([&](){
+			SDL_SetWindowSize(ext_window, 1600, 900);
+		});
 		terminate.setUserEvent([&](){
 			QUIT = true;
 		});
 		// - Connect
 		panelTools.push(&titleTools);
-		panelTools.push(&option000);
+		panelTools.push(&hidden);
 		panelTools.push(&panelDebug);
 		panelTools.push(&panelWindow);
+
 		panelDebug.push(&titleDebug);
-		panelDebug.push(&option001);
-		panelDebug.push(&option002);
+		panelDebug.push(&debugDepth);
+		panelDebug.push(&debugNormal);
+		panelDebug.push(&debugGUI);
+		panelDebug.push(&shaders);
+		panelDebug.push(&cbxDebugDepth);
+		panelDebug.push(&cbxDebugNormal);
+		panelDebug.push(&cbxDebugGUI);
+
 		panelWindow.push(&titleWindow);
+		panelWindow.push(&wh1280x720);
+		panelWindow.push(&wh1366x768);		
+		panelWindow.push(&wh1400x1050);		
+		panelWindow.push(&wh1600x900);		
 		panelWindow.push(&terminate);
+		
+		panelHelp.push(&titleHelp);
+		panelHelp.push(&help);
+
 		std::cout << "[Master UI Objects: " << GUI::stack.size() << "]\n" << std::endl;
 		
 		benchmark = SDL_GetTicks();
@@ -204,6 +331,12 @@ int main(int argv, char** args){
 									break;
 							}
 						break;
+					case SDL_WINDOWEVENT:
+						if(event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED){
+							SDL_GetWindowSize(ext_window, &ext_screen_width, &ext_screen_height);
+							SDL_SetWindowPosition(ext_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+						}
+						break;
 				}
 				if(!LOCKEDMOTION){
 					fpsCam.keyboardEvent(&event);
@@ -232,7 +365,6 @@ int main(int argv, char** args){
 			// terrain.getHeightAt(fpsCam.getPosition());
 					
 			glViewport(0, 0, ext_screen_width, ext_screen_height);
-	
 			glEnable(GL_DEPTH_TEST);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -244,45 +376,39 @@ int main(int argv, char** args){
 					arrayModels[i * 10 + j] = scale(vec3<float>(0.5f)) * rotateX(theta) * rotateY(theta) * rotateZ(theta) * translate(vec3<float>((j * 10.0f) + (-50.0f), 20.0f, (i * 10.0f) + (-50.0f)));
 				}
 			}
-			obj000.updateInstances();
-			obj000.render(arrayModels.size());
+			// obj000.updateInstances();
+			// obj000.render(arrayModels.size());
 			glEnable(GL_DEPTH_TEST);
-			obj003.render(arrayColumns.size());
 			#if RENDER_DEBUG_MODE
 				if(DEBUG_DEPTH){
 					glUseProgram(SRW::debugPrograms[0]);
 					terrain.render();	
-					obj001.render();
 					obj002.render();
+					obj003.render();
 					glUseProgram(0);
 				}
 				else if(DEBUG_NORMAL){
 					glUseProgram(SRW::debugPrograms[1]);
 					terrain.render();	
-					obj001.render();
 					obj002.render();
+					obj003.render();
 					glUseProgram(0);
 				}
-				if(DEBUG_NORMAL || !DEBUG_DEPTH){
+				if(!DEBUG_DEPTH){
 					glUseProgram(SRW::programs[TERRAIN_PROGRAM]);
 					terrain.render();	
-					glUseProgram(0);
-					// glUseProgram(SRW::programs[UNIFORM_COLOR]);
-					// obj001.render();
-					// glUseProgram(0);
 					glUseProgram(SRW::programs[TEXTURIZED]);
+					obj003.render();
 					obj002.render();
-					glUseProgram(0);
+					glUseProgram(0);					
 				}
 			#else
 				glUseProgram(SRW::programs[TERRAIN_PROGRAM]);
 				terrain.render();	
-				glUseProgram(SRW::programs[UNIFORM_COLOR]);
-				obj001.render();
+				glUseProgram(SRW::programs[TEXTURIZED]);
+				obj002.render();
+				obj003.render();
 				glUseProgram(0);
-				// glUseProgram(SRW::programs[TEXTURIZED]);
-				// obj002.render();
-				// glUseProgram(0);
 			#endif
 
 			glDisable(GL_DEPTH_TEST);			
@@ -291,14 +417,15 @@ int main(int argv, char** args){
 			avgFps = counted_frame / (SDL_GetTicks() / 1000.0f);
 			fpsMeter.render(std::to_string(avgFps));
 
-			GUI::stackRender();
-			// GUI::stackPicking();
+			if(!DEBUG_GUI)
+				GUI::stackRender();
+			else
+				GUI::stackPicking();
 
 			counted_frame++;
 			SDL_GL_SwapWindow(ext_window);
 		}
 		obj000.free();
-		obj001.free();
 		obj002.free();
 		obj003.free();
 		terrain.free();

@@ -39,6 +39,14 @@ void Panel::picking(){
 void Panel::render(){
 	glUseProgram(SRW::programs[GUI_PANEL_PROG]);
 	glBindVertexArray(VAO);
+	if(!sampler2D.empty()){
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, sampler2D[0].texID);
+		glUniform1i(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], sampler2D[0].label.c_str()), sampler2D[0].value);
+		glUniform1i(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "flagTex"), 1);
+	}
+	else
+		glUniform1i(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "flagTex"), 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, GUI::ubBinding, GUI::uboGUI);
 	glUniform4fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbBorderColor"), 1, rgbBorderColor.address());
 	glUniform4fv(glGetUniformLocation(SRW::programs[GUI_PANEL_PROG], "rgbHeaderColor"), 1, rgbHeaderColor.address());

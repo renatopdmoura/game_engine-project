@@ -543,6 +543,12 @@ void SRW::setUniformMat4f(std::string name, mat4<float>* value){
 }
 
 void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit, uint profile, uint* parmWidth, uint* parmHeight){
+	int index = searchUniformSampler2D(std::string(uniformName));
+	if(index != -1){
+		// std::cerr << "Uniform name has defined!\n";
+		std::vector<uniform1i>::iterator it = sampler2D.begin() + index;
+		sampler2D.erase(it);
+	}
 	uint id      = 0;
 	int width    = 0;
 	int height   = 0;

@@ -14,6 +14,7 @@ Camera::Camera(vec3<float> from, vec3<float> to, float theta, float near, float 
 	view           = lookAt(position, position + target, vec3<float>(0.0f, 1.0f, 0.0f));
 	projection     = perspective(fovy, (float)ext_screen_width / (float)ext_screen_height, zNear, zFar);
 	viewProjection = view * projection;
+	updateCamera();
 }
 
 bool on = false;

@@ -88,6 +88,7 @@ Object::Object(std::string model_path, uint type, std::vector<mat4<float>>* matr
 					setProgram(SRW::programs[TEXTURIZED]);
 					break;
 			}
+			// - Outros programas de sombreamento não conhecerão o uniforme "model"
 			setUniformMat4f("model", &model);
 		}
 		genBuffers();

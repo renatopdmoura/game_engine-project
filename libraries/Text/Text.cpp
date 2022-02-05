@@ -387,7 +387,7 @@ void Text::picking(){
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosY"), position.y);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fWidth"), resolution.w);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeight"), resolution.h);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeaderHeight"), headerHeight);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeaderHeight"), resolution.h);
 	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fBorderThickness"), borderThickness);
 	glDrawArrays(GL_TRIANGLES, 0, 6);
 	glBindVertexArray(0);

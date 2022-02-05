@@ -1,4 +1,4 @@
-OBJS = ../libraries/GUI/GUI.cpp ../libraries/GUI/Panel.cpp  ../libraries/CommandLine/CommandLine.cpp ../libraries/Camera/Camera.cpp ../libraries/Text/Text.cpp ../libraries/Quad/Quad.cpp ../libraries/Terrain/Terrain.cpp ../libraries/Object/Object.cpp ../libraries/SRW/SRW.cpp main.cpp 
+OBJS = ../libraries/GUI/GUI.cpp ../libraries/GUI/Panel.cpp ../libraries/GUI/Checkbox.cpp  ../libraries/CommandLine/CommandLine.cpp ../libraries/Camera/Camera.cpp ../libraries/Text/Text.cpp ../libraries/Quad/Quad.cpp ../libraries/Terrain/Terrain.cpp ../libraries/Object/Object.cpp ../libraries/SRW/SRW.cpp main.cpp 
 OBJ_NAME = main.exe
 CC = g++
 INCLUDE_PATHS = -I../include/SDL2 -I../include/OpenGL -I../include/freetype -I../include

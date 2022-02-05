@@ -40,10 +40,6 @@ private:
 public:
 	static std::vector<Text*> stack;
 	
-	void updateIconBuffer(){
-		
-	}
-
 	Text(std::string path, uint px, float x, float y, vec3<float> color = vec3<float>(1.0f), std::string str = std::string(""), GUI_PanelLayout inside = ON_WINDOW, uint spacing = 2, uint tab = 50);
 	Text(std::string path, uint px, float x, float y, vec3<float>color, uint type, std::string str = std::string(""));
 	~Text();

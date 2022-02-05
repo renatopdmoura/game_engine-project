@@ -19,6 +19,7 @@ GUI::GUI(){
 	hidden 	        = false;
 	winSize 	    = vec2<float>((float)ext_screen_width, (float)ext_screen_height);
 	callback        = [&](){ /*std::cout << "Object ID " << (uint)ID << std::endl;*/};
+	pin 			= false;
 }
 
 GUI::~GUI(){
@@ -46,6 +47,53 @@ void GUI::genBuffers(){
 	updateBuffer();	
 }
 
+void GUI::updateBuffer(){
+	// - Determinar se o objeto em questão é um nó
+	bool isNode = parent != NULL? true: false;	
+	// - As coordenadas do objeto dependem da janela de visualização
+	if(layout == ON_WINDOW){
+		if(type == PANEL || type == CHECKBOX){
+			resolution.w = ratio.z * (float)ext_screen_width / 100.0f;
+			resolution.h = ratio.w == 0.0f? resolution.w: ratio.w * (float)ext_screen_height / 100.0f;
+		}		
+		position.x = ratio.x * ((float)ext_screen_width  - resolution.w) / 100.0f;
+		position.y = ratio.y * ((float)ext_screen_height - resolution.h) / 100.0f;
+	}
+	// - As coordenadas do objeto se ajustam ao cabeçalho do objeto pai
+	else if(layout == ON_HEADER && isNode){
+		if(type == PANEL || type == CHECKBOX){
+			resolution.w = ratio.z * (parent->getResolution().w - parent->getBorderThickness() * 2) / 100.0f;	
+			resolution.h = ratio.w != 0.0f? ratio.w * (parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f)) / 100.0f: resolution.w;
+		}
+		position.x = (ratio.x * ((parent->getResolution().w - parent->getBorderThickness() * 2) - resolution.w) / 100.0f) + parent->getPosition().x + parent->getBorderThickness();
+		position.y = (ratio.y * (parent->getHeaderHeight() - resolution.h) / 100.0f) + parent->getPosition().y + parent->getBorderThickness() + parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f);
+	}
+	// - As coordenadas do objeto se ajustam ao corpo do objeto pai
+	else if(layout == ON_BODY && isNode){
+		if(type == PANEL || type == CHECKBOX){
+			resolution.w = ratio.z * (parent->getResolution().w - parent->getBorderThickness() * 2) / 100.0f;	
+			resolution.h = ratio.w != 0.0f? ratio.w * (parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f)) / 100.0f: resolution.w;
+		}
+		position.x = (ratio.x * ((parent->getResolution().w - parent->getBorderThickness() * 2) - resolution.w) / 100.0f) + parent->getPosition().x;
+		position.y = (ratio.y * (parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f) - resolution.h) / 100.0f) + parent->getPosition().y;
+		position.x += parent->getBorderThickness();
+		position.y += parent->getBorderThickness();
+	}
+	// - Atualiza o quadrante de renderização
+	float quad[6][4]{
+				{ position.x,  position.y + resolution.h, 0.0f, 0.0f },            
+	            { position.x,  position.y, 0.0f, 1.0f },
+	            { position.x + resolution.w, position.y,  1.0f, 1.0f },
+	            { position.x,  position.y + resolution.h, 0.0f, 0.0f },
+	            { position.x + resolution.w, position.y,  1.0f, 1.0f },
+	            { position.x + resolution.w, position.y + resolution.h, 1.0f, 0.0f }  
+			};
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad), &quad[0][0]);
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	getOffsetPercentage();
+}
+
 void GUI::mouseEvent(SDL_Event* event){
 	switch(event->type){
 		case SDL_MOUSEBUTTONDOWN:
@@ -64,7 +112,7 @@ void GUI::mouseEvent(SDL_Event* event){
 					}
 					GUI::stack.back() = this;
 				}
-				else if(GUI::pixelColor == ID){
+				if(GUI::pixelColor == ID){
 					callback();
 				}
 			}
@@ -74,7 +122,7 @@ void GUI::mouseEvent(SDL_Event* event){
 			GUI::pixelColor = 0;
 			break;
 		case SDL_MOUSEMOTION:
-			if(GUI::pixelColor == ID && parent == NULL){
+			if(GUI::pixelColor == ID && parent == NULL && !pin){
 				SDL_SetWindowGrab(ext_window, SDL_TRUE);
 				offset.x += (float)event->motion.xrel;
 				offset.y -= (float)event->motion.yrel;
@@ -99,60 +147,12 @@ void GUI::windowEvent(SDL_Event* event){
 	}
 }
 
-void GUI::updateBuffer(){
-	// - Determinar se o objeto em questão é um nó
-	bool isNode = parent != NULL? true: false;
-	
-	// - As coordenadas do objeto dependem da janela de visualização
-	if(layout == ON_WINDOW){
-		if(type == PANEL){
-			resolution.w = ratio.z * (float)ext_screen_width / 100.0f;
-			resolution.h = ratio.w == 0.0f? resolution.w: ratio.w * (float)ext_screen_height / 100.0f;
-		}		
-		position.x = ratio.x * ((float)ext_screen_width  - resolution.w) / 100.0f;
-		position.y = ratio.y * ((float)ext_screen_height - resolution.h) / 100.0f;
-	}
-	// - As coordenadas do objeto se ajustam ao cabeçalho do objeto pai
-	else if(layout == ON_HEADER && isNode){
-		position.x = (ratio.x * ((parent->getResolution().w - parent->getBorderThickness() * 2) - resolution.w) / 100.0f) + parent->getPosition().x + parent->getBorderThickness();
-		position.y = (ratio.y * (parent->getHeaderHeight() - resolution.h) / 100.0f) + parent->getPosition().y + parent->getBorderThickness() + parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f);
-	}
-	// - As coordenadas do objeto se ajustam ao corpo do objeto pai
-	else if(layout == ON_BODY && isNode){
-		if(type == PANEL){
-			resolution.w = ratio.z * (parent->getResolution().w - parent->getBorderThickness() * 2) / 100.0f;	
-			resolution.h = ratio.w != 0.0f? ratio.w * (parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f)) / 100.0f: resolution.w;
-		}
-		position.x = (ratio.x * ((parent->getResolution().w - parent->getBorderThickness() * 2) - resolution.w) / 100.0f) + parent->getPosition().x;
-		position.y = (ratio.y * (parent->getResolution().h - (parent->getHeaderHeight() + parent->getBorderThickness() * 2.0f) - resolution.h) / 100.0f) + parent->getPosition().y;
-		position.x += parent->getBorderThickness();
-		position.y += parent->getBorderThickness();
-	}
-	// - Atualiza o quadrante de renderização
-	float quad[6][4]{
-				{ position.x,  position.y + resolution.h, 0.0f, 0.0f },            
-	            { position.x,  position.y, 0.0f, 1.0f },
-	            { position.x + resolution.w, position.y,  1.0f, 1.0f },
-	            { position.x,  position.y + resolution.h, 0.0f, 0.0f },
-	            { position.x + resolution.w, position.y,  1.0f, 1.0f },
-	            { position.x + resolution.w, position.y + resolution.h, 1.0f, 0.0f }  
-			};
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad), &quad[0][0]);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	getOffsetPercentage();
-}
-
-void GUI::push(GUI* guiObject){
-	for(std::vector<GUI*>::iterator it = stack.begin(); it != stack.end(); ++it){
-		if((*(*it)).getID() == guiObject->getID()){
-			stack.erase(it);
-			break;
-		}
-	}
-	guiObject->parent = this;
-	guiObject->updateBuffer();
-	childrens.push_back(guiObject);
+void GUI::getOffsetPercentage(){
+	float scaleX = offset.x * 100.0f / winSize.w;
+	float scaleY = offset.y * 100.0f / winSize.h;
+	offset.x = scaleX * ext_screen_width / 100.0f;
+	offset.y = scaleY * ext_screen_height / 100.0f;
+	winSize = vec2<float>((float)ext_screen_width, (float)ext_screen_height);
 }
 
 void GUI::searchBranches(std::vector<GUI*>& v, SDL_Event* event){
@@ -170,12 +170,16 @@ void GUI::searchBranches(std::vector<GUI*>& v, SDL_Event* event){
 	}
 }
 
-void GUI::getOffsetPercentage(){
-	float scaleX = offset.x * 100.0f / winSize.w;
-	float scaleY = offset.y * 100.0f / winSize.h;
-	offset.x = scaleX * ext_screen_width / 100.0f;
-	offset.y = scaleY * ext_screen_height / 100.0f;
-	winSize = vec2<float>((float)ext_screen_width, (float)ext_screen_height);
+void GUI::push(GUI* guiObject){
+	for(std::vector<GUI*>::iterator it = stack.begin(); it != stack.end(); ++it){
+		if((*(*it)).getID() == guiObject->getID()){
+			stack.erase(it);
+			break;
+		}
+	}
+	guiObject->parent = this;
+	guiObject->updateBuffer();
+	childrens.push_back(guiObject);
 }
 
 // - Factory functions
@@ -269,17 +273,12 @@ void GUI::guiUniformBuffer(){
 }
 
 // - Setters
-
-void GUI::setParent(GUI* guiObject){
-	parent = guiObject;
-}
-
 void GUI::setID(unsigned char id){
 	ID = id;
 }
 
-void GUI::setHeaderHeight(float height){
-	headerHeight = height;
+void GUI::setParent(GUI* guiObject){
+	parent = guiObject;
 }
 
 void GUI::setRatio(float x, float y, float w, float h){
@@ -306,12 +305,12 @@ void GUI::setPanelLayout(GUI_PanelLayout distribute){
 	layout = distribute;
 }
 
-void GUI::setHidden(bool flag){
-	hidden = flag;
+void GUI::setBackgroundColor(vec4<float> color){
+	rgbBackgroundColor = color;
 }
 
-void GUI::setBorderColor(vec3<float> color){
-	rgbBorderColor = color;
+void GUI::setHeaderHeight(float height){
+	headerHeight = height;
 }
 
 void GUI::setBorderThickness(float thickness){
@@ -321,25 +320,40 @@ void GUI::setBorderThickness(float thickness){
 		float m = borderThickness * 100.0f / resolution.h;
 		n = n > 100.0f? 100.0f: n;
 		m = m > 100.0f? 100.0f: m;
-
 		ratio.z = n == 100.0f? 100.0f: ratio.z + n;
 		ratio.w = ratio.w != 0.0f? m == 100.0f? 100.0f: ratio.w + m: 0.0f;
 		updateBuffer();
 	}
 }
 
-// - Getters
-
-GUI* GUI::getParent(){
-	return parent;
+void GUI::setHidden(bool flag){
+	hidden = flag;
 }
 
-unsigned char GUI::getID() const{
+void GUI::setHeaderColor(vec4<float> color){
+	rgbHeaderColor = color;
+}
+
+void GUI::setBorderColor(vec4<float> color){
+	rgbBorderColor = color;
+}
+
+void GUI::setUserEvent(std::function<void(void)> func){
+	callback = func;
+}
+
+void GUI::setPin(bool flag){
+	pin = flag;
+}
+
+// - Getters
+
+uint GUI::getID() const{
 	return ID;
 }
 
-float GUI::getHeaderHeight() const{
-	return headerHeight;
+GUI* GUI::getParent(){
+	return parent;
 }
 
 vec4<float> GUI::getRatio(){
@@ -366,10 +380,30 @@ GUI_PanelLayout GUI::getPanelLayout(){
 	return layout;
 }
 
+float GUI::getHeaderHeight() const{
+	return headerHeight;
+}
+
 float GUI::getBorderThickness() const{
-		return borderThickness;
+	return borderThickness;
 }
 
 bool GUI::getHidden() const{
 	return hidden;
+}
+
+vec4<float> GUI::getBackgroundColor(){
+	return rgbBackgroundColor;
+}
+
+vec4<float> GUI::getHeaderColor(){
+	return rgbHeaderColor;
+}
+
+vec4<float> GUI::getBorderColor(){
+	return rgbBorderColor;
+}
+
+bool GUI::getPin() const{
+	return pin;
 }

@@ -1,6 +1,7 @@
 #version 460 core
 
 in vec2 canvasCoord;
+in vec2 texCoords;
 
 out vec4 fragment;
 
@@ -16,6 +17,9 @@ uniform float fHeight;
 uniform float fHeaderHeight;
 uniform float fBorderThickness;
 
+uniform bool flagTex;
+uniform sampler2D img;
+
 void main(){
 	float fBorderMinX = (fPosX + fOffsetX) + fBorderThickness;
 	float fBorderMaxX = (fPosX + fOffsetX) + fWidth - fBorderThickness;
@@ -30,6 +34,8 @@ void main(){
 	
 	if(canvasCoord.y > fHeaderMinY && canvasCoord.y < fHeaderMaxY)
 		fragment = rgbHeaderColor;
+	else if(flagTex)
+		fragment = texture(img, texCoords);
 	else
 		fragment = rgbBackgroundColor;
 	if((H || V) && fBorderThickness > 0.0f)
