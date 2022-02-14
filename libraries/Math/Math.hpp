@@ -381,6 +381,21 @@ T dot(const vec3<T>& a, const vec3<T>& b){
 }
 
 template<typename T>
+T length(vec3<T>& a, vec3<T>& b){
+	vec3<T> major, minor;
+	if(a > b){
+		major = a;
+		minor = b;
+	}
+	else{
+		major = b;
+		minor = a;
+	}
+	vec3<float> vector = major - minor;
+	return sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+}
+
+template<typename T>
 mat4<T> lookAt(const vec3<T>& eye, const vec3<T>& target, const vec3<T> up){
 	vec3<T> zaxis = normalize(target - eye);
 	vec3<T> xaxis = normalize(cross(zaxis, up));

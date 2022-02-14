@@ -168,8 +168,8 @@ void SRW::sharedUniforms(mat4<float>& viewProj, vec3<float>& cameraPos, bool upd
 						vec4<float>(ptr[16], ptr[17], ptr[18], ptr[19]).show("cameraPos");
 
 					}
-					delete[] buffer;//?????
 				}
+				delete[] buffer;
 				glBindBuffer(GL_UNIFORM_BUFFER, 0);
 			}
 		}
@@ -285,10 +285,18 @@ void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std
 							std::vector<int> offset(uniformBlockCountMembers[j]);
 							glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
 							for(uint i = 0; i < pointLightArray->size(); ++i){
-								std::memcpy(pointLightBuffer + offset[0] + (sizeof(vec4<float>) * i), &(*pointLightArray)[i].position, sizeof(vec4<float>));
-								std::memcpy(pointLightBuffer + offset[1] + (sizeof(vec4<float>) * i), &(*pointLightArray)[i].color, sizeof(vec4<float>));
+								float position[4], color[4];
+								position[0] = (*pointLightArray)[i].position.x;
+								position[1] = (*pointLightArray)[i].position.y;
+								position[2] = (*pointLightArray)[i].position.z;
+								position[3] = (*pointLightArray)[i].position.w;
+								color[0]    = (*pointLightArray)[i].color.r;
+								color[1]    = (*pointLightArray)[i].color.g;
+								color[2]    = (*pointLightArray)[i].color.b;
+								color[3]    = (*pointLightArray)[i].color.a;
+								std::memcpy(pointLightBuffer + offset[0] + (sizeof(vec4<float>) * i), position, sizeof(vec4<float>));
+								std::memcpy(pointLightBuffer + offset[1] + (sizeof(vec4<float>) * i), color, sizeof(vec4<float>));
 							}
-							// SRW::gUBO.push_back(0);
 							glGenBuffers(1, &SRW::gUBO[j]);
 							glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
 							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], pointLightBuffer, GL_DYNAMIC_DRAW);
@@ -325,7 +333,6 @@ void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std
 								std::memcpy(spotLightBuffer + offset[1] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].position, sizeof(vec4<float>));
 								std::memcpy(spotLightBuffer + offset[2] + (sizeof(vec4<float>) * i), &(*spotLightArray)[i].color, sizeof(vec4<float>));
 							}
-							// SRW::gUBO.push_back(0);
 							glGenBuffers(1, &SRW::gUBO[j]);
 							glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
 							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], spotLightBuffer, GL_DYNAMIC_DRAW);
@@ -357,12 +364,13 @@ void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std
 							}
 							std::vector<int> offset(uniformBlockCountMembers[j]);
 							glGetActiveUniformsiv(prog, uniformBlockCountMembers[j], &uniformBlockMemberIndex[0] , GL_UNIFORM_OFFSET, offset.data());
-							std::memcpy(sunLightBuffer + offset[0] + sizeof(vec4<float>), &sun->direction, sizeof(vec4<float>));
-							std::memcpy(sunLightBuffer + offset[1] + sizeof(vec4<float>), &sun->color, sizeof(vec4<float>));
-							// SRW::gUBO.push_back(0);
+							float direction[] = {sun->direction.x, sun->direction.y, sun->direction.z, sun->direction.w};
+							float color[]     = {sun->color.r, sun->color.g, sun->color.b, sun->color.a};
+							std::memcpy(sunLightBuffer + offset[0], direction, sizeof(GLfloat) * 4);
+							std::memcpy(sunLightBuffer + offset[1], color, sizeof(GLfloat) * 4);
 							glGenBuffers(1, &SRW::gUBO[j]);
 							glBindBufferBase(GL_UNIFORM_BUFFER, j, SRW::gUBO[j]);
-							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], sun, GL_DYNAMIC_DRAW);
+							glBufferData(GL_UNIFORM_BUFFER, uniformBlockSize[j], sunLightBuffer, GL_DYNAMIC_DRAW);
 							if(false){
 								float* ptr = reinterpret_cast<float*>(glMapBuffer(GL_UNIFORM_BUFFER, GL_READ_ONLY));
 								if(ptr != NULL){
@@ -390,6 +398,7 @@ void SRW::sharedUniforms(mat4<float>& matrix, vec3<float>& cameraPos, Sun* sun, 
 //SECTION: Constructors and destructor
 SRW::SRW(){
 	//Nothing to do
+	itSampler2D = sampler2D.begin();
 }
 
 SRW::~SRW(){
@@ -542,8 +551,8 @@ void SRW::setUniformMat4f(std::string name, mat4<float>* value){
 	}
 }
 
-void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit, uint profile, uint* parmWidth, uint* parmHeight){
-	int index = searchUniformSampler2D(std::string(uniformName));
+void SRW::addTexture(std::string texPath, std::string uniformName, uint texUnit, uint profile, uint* parmWidth, uint* parmHeight){
+	int index = searchUniformSampler2D(uniformName);
 	if(index != -1){
 		// std::cerr << "Uniform name has defined!\n";
 		std::vector<uniform1i>::iterator it = sampler2D.begin() + index;
@@ -557,7 +566,7 @@ void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit,
 	glGenTextures(1, &id);
 	glBindTexture(GL_TEXTURE_2D, id);
 	if(!glIsTexture(id)) exit(0);
-	data = stbi_load(texPath, &width, &height, &channels, 0);
+	data = stbi_load(texPath.c_str(), &width, &height, &channels, 0);
 	if(parmWidth != NULL && parmHeight != NULL){
 		*parmHeight = height;
 		*parmWidth  = width;
@@ -588,14 +597,14 @@ void SRW::addTexture(const char* texPath, const char* uniformName, uint texUnit,
 		exit(1);
 	}
 	stbi_image_free(data);	
-	sampler2D.push_back(uniform1i(uniformName, texUnit, id));
+	sampler2D.push_back(uniform1i(uniformName.c_str(), texUnit, id));
 }
-void SRW::addTexture(uint& id, const char* uniformName, uint texUnit, uint uniformType){
+void SRW::addTexture(uint& id, std::string uniformName, uint texUnit, uint uniformType){
 	if(uniformType){
-		samplerCubemap.push_back(uniform1i(uniformName, texUnit, id));
+		samplerCubemap.push_back(uniform1i(uniformName.c_str(), texUnit, id));
 	}
 	else{
-		sampler2D.push_back(uniform1i(uniformName, texUnit, id));
+		sampler2D.push_back(uniform1i(uniformName.c_str(), texUnit, id));
 	}
 }
 

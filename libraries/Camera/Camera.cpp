@@ -14,10 +14,12 @@ Camera::Camera(vec3<float> from, vec3<float> to, float theta, float near, float 
 	view           = lookAt(position, position + target, vec3<float>(0.0f, 1.0f, 0.0f));
 	projection     = perspective(fovy, (float)ext_screen_width / (float)ext_screen_height, zNear, zFar);
 	viewProjection = view * projection;
-	updateCamera();
+	FOWARD 		   = false;
+	BACKFOWARD 	   = false;
+	LEFT 		   = false;
+	RIGHT     	   = false;
 }
 
-bool on = false;
 void Camera::keyboardEvent(SDL_Event* event){
 	if(event->type == SDL_KEYDOWN && event->key.repeat == 0){
 		switch(event->key.keysym.scancode){
@@ -100,6 +102,11 @@ void Camera::updateCoordinates(){
 		position = position - target * (speed * deltaTime);
 	lastFrameTime = currentFrameTime;
 	updateMatrices();
+	
+	if(RIGHT || LEFT || FOWARD || BACKFOWARD) 
+		sfx->play();
+	else
+		sfx->stop();
 }
 
 void Camera::updateCamera(){
@@ -116,6 +123,14 @@ void Camera::setFovy(float theta){
 void Camera::setPosition(vec3f coordinate){
 	position = coordinate;
 	updateMatrices();
+}
+
+void Camera::setSpeed(float value){
+	speed = value;
+}
+
+void Camera::setSensitivity(float value){
+	sensitivity = value;
 }
 
 mat4<float>& Camera::getViewAndProjectionMatrix(){
@@ -142,10 +157,26 @@ float Camera::getFovy() const{
 	return fovy;
 }
 
-float Camera::getYaw() const{
+float& Camera::getYaw(){
 	return yaw;
 }
 
-float Camera::getPitch() const{
+float& Camera::getPitch(){
 	return pitch;
+}
+
+float Camera::getSpeed() const{
+	return speed;
+}
+
+float Camera::getSensitivity() const{
+	float sensitivity;
+}
+
+float Camera::getFar() const{
+	return zFar;
+}
+
+float Camera::getNear() const{
+	return zNear;
 }

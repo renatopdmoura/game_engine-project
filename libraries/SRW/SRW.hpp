@@ -70,21 +70,21 @@ private:
 	};
 	static void sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std::vector<SpotLight>* spotLightArray);
 public:	
-	//Constructors
+	// - Constructors
 	SRW();
 	virtual ~SRW();
 		
-	//To programs [DONED]
+	// - To programs [DONED]
 	static uint genProgramShader(std::string vs_path, std::string fs_path);
 	static uint genProgramShader(std::string vs_path, std::string gs_path, std::string fs_path);
 	static void genProgramShaders();
 
-	//To buffers
+	// - To uniform buffers
 	static void genGeometryBuffer(uint& gBuffer, uint& gDepth, uint& gPosition, uint& gNormal, uint& gAlbedo, uint width, uint height);
-	static void sharedUniforms(mat4<float>& matrix, vec3<float>& cameraPos, Sun* sun, std::vector<PointLight>* pointLightArray, std::vector<SpotLight>* spotLightArray = NULL);
+	static void sharedUniforms(mat4<float>& matrix, vec3<float>& cameraPos, Sun* sun, std::vector<PointLight>* pointLightArray, std::vector<SpotLight>* spotLightArray);
 	static void sharedUniforms(mat4<float>& viewProj, vec3<float>& cameraPos, bool update = true);
 
-	//Basic setters to init uniforms [DONED]
+	// - Basic setters to init uniforms [DONED]
 	void setUniform1b(std::string, bool value);
 	void setUniform1f(std::string, float value);
 	void setUniform1f(std::string name, float* value);
@@ -92,42 +92,73 @@ public:
 	void setUniform3f(std::string, vec3f* value);
 	void setUniformMat4f(std::string name, mat4<float>* value);
 
-	void addTexture(const char* texPath, const char* uniformName, uint texUnit, uint profile = DEFAULT_PROFILE, uint* parmWidth = NULL, uint* parmHeight = NULL);
-	void addTexture(uint& texID, const char* uniformName, uint texUnit, uint uniformType = 0);
+	void addTexture(std::string texPath, std::string uniformName, uint texUnit, uint profile = DEFAULT_PROFILE, uint* parmWidth = NULL, uint* parmHeight = NULL);
+	void addTexture(uint& texID, std::string uniformName, uint texUnit, uint uniformType = 0);
 
-	//Initializer uniforms
+	// - Initializer uniforms
 	void initUnifSampler2D();
 	void initUnifSamplerCubemap();
-	//Until here [DONE]
+
+	// - Until here [DONE]
 	void initUnif1b();
 	void initUnif1f();
 	void initUnif3f();
 	void initUnifMat4f();
 		
-	//Define the shading program [DONED]
+	// - Define the shading program [DONED]
 	void setProgram(uint& prog);
 	uint& getProgram();
 
-	//Getters arrays [DONED]
+	// - Getters arrays [DONED]
 	uniform1b& getUniform1b(uint index);
 	uniform1f& getUniform1f(uint index);
 	uniform3f& getUniform3f(uint index);
 	uniformMat4f& getUniformMat4f(uint index);
 		
-	//Search for uniform names in uniform arrays [DONED]
+	// - Search for uniform names in uniform arrays [DONED]
 	int searchUniformSampler2D(std::string name);
 	int searchUniform1b(std::string name);
 	int searchUniform1f(std::string name);
 	int searchUniform3f(std::string name);
 	int searchUniformMat4f(std::string name);
-	
-	//Displays instance data on console [DONED]
+
+	// - Return vector members
+	inline std::vector<uniform1i>& getSampler2D(){
+		return sampler2D;
+	}
+	inline std::vector<uniform1i>& getSamplerCubemap(){
+		return samplerCubemap;
+	}
+	inline std::vector<uniform1b>& getUniform1b(){
+		return unif1b;
+	}
+	inline std::vector<uniform1f>& getUniform1f(){
+		return unif1f;
+	}
+	inline std::vector<uniform3f>& getUniform3f(){
+		return unif3f;
+	}
+	inline std::vector<uniformMat4f>& getUniformMat4f(){
+		return unifMat4f;
+	}
+
+	// - public iterator to vectorial members
+	std::vector<uniform1i>::iterator itSampler2D;
+	std::vector<uniform1i>::iterator itSamplerCubemap;
+	std::vector<uniform1b>::iterator itUni1b;
+	std::vector<uniform1f>::iterator itUni1f;
+	std::vector<uniform3f>::iterator itUni3f;
+	std::vector<uniformMat4f>::iterator itUniMat4f;
+
+	// - Displays instance data on console [DONED]
+	void info();
+
+	// - Default programs and global uniform buffer
 	static uint programs[6];
 	#if RENDER_DEBUG_MODE
 		static uint debugPrograms[2];
 	#endif
 	static std::vector<uint> gUBO;
-	void info();
 protected:
 	void genShader(std::string vs_path, std::string fs_path);
 	uint program;

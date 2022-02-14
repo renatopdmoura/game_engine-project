@@ -5,14 +5,19 @@
 
 class Checkbox : public GUI{
 public:
+	// - Constructor and destructor
 	Checkbox(float x, float y,  GUI_PanelLayout panelLayout = ON_BODY, float w = 8.0f, float h = 0.0f, vec4<float> marked = vec4<float>(1.0f), vec4<float> unmarked = vec4<float>(0.6f, 0.6f, 0.6f), float thickness = 4.0f, vec4<float> borderColor = vec4<float>(0.2f, 0.2f, 0.2f));
 	~Checkbox();
+	
+	// - Render
 	void render();
 	void picking();
 
+	// - Setters
 	void setOn(bool flag);
+	
+	// - Getters
 	bool getOn() const;
-
 private:
 	bool on;
 	vec4<float> rgbaMarkedColor;

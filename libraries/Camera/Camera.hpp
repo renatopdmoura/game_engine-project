@@ -1,11 +1,15 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include <SDL.h>
 #include "../Math/Math.hpp"
+#include "../Audio/Audio.hpp"
+
+#include <SDL.h>
+#include <functional>
 
 class Camera{
 	public:
+		// - General functions
 		Camera(vec3<float> from, vec3<float> to, float theta, float near, float far);
 		void keyboardEvent(SDL_Event* event);
 		void mouseEvent(SDL_Event* event);
@@ -13,23 +17,35 @@ class Camera{
 		void updateMatrices();
 		void updateCoordinates();
 		void updateCamera();
+		
+		// - Setters
 		void setFovy(float theta);
 		void setPosition(vec3<float> coordinate);
+		void setSpeed(float value);
+		void setSensitivity(float value);
+		
+		// - Getters
 		mat4<float>& getViewMatrix();
 		mat4<float>& getProjectionMatrix();
 		mat4<float>& getViewAndProjectionMatrix();
 		vec3<float>& getPosition();
 		vec3<float>& getTarget();
 		float getFovy() const;
-		float getYaw() const;
-		float getPitch() const;		
+		float& getYaw();
+		float& getPitch();		
+		float getSpeed() const;
+		float getSensitivity() const;	
+		float getFar() const;
+		float getNear() const;
+		
+		Audio* sfx;
 	private:
-		//Matrices
+		// - Matrices
 		mat4<float> view;
 		mat4<float> projection;
 		mat4<float> viewProjection;
 
-		//Camera control angle view
+		//- Camera control angle view
 		float yaw;
 		float pitch;
 		float fovy;
@@ -37,16 +53,16 @@ class Camera{
 		float zNear;
 		float zFar;
 
-		//Camera control offset
+		// - Camera control offset
 		vec3<float> position;
 		vec3<float> target;
-		bool RIGHT = false;
-		bool FOWARD = false;
-		bool LEFT = false;
-		bool BACKFOWARD = false;
+		bool RIGHT;
+		bool FOWARD;
+		bool LEFT;
+		bool BACKFOWARD;
 		float speed;
 
-		//Frame time controls
+		// - Frame time controls
 		float lastFrameTime;
 		float currentFrameTime;
 		float deltaTime;

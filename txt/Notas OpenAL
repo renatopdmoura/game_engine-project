@@ -1,0 +1,20 @@
+Notas OpenAL
+
+AL_REFERENCE_DISTANCE é a distância a partir da qual o ouvinte ouvirá o áudio com o ganho definido para AL_GAIN. Ou seja, antes do valor definido para esse alvo, a distância será atenuada de acordo com a fórmula para AL_INVERSE_DISTANCE_CLAMPED (AL_REFERENCE_DISTANCE / AL_REFERENCE_DISTANCE + AL_ROLLOFF_FACTOR * (distance - AL_REFERENCE_DISTANCE));
+
+Modelo Fixado por Distância Inversa
+
+AL_REFERECE_DISTANCE = 1.0f;
+AL_MAX_DISTANCE      = 128.0f;
+distancia            = 64.0f;
+
+
+distância = max(distância, AL_REFERENCE_DISTANCE);
+distancia = max(distância, AL_MAX_DISTANCE);
+
+ganho = AL_REFERENCE_DISTANCE / AL_REFERENCE_DISTANCE + AL_ROLLOF_FACTOR * (distância - AL_REFERENCE_DISTANCE)
+
+distância = max(64.0f, 1.0f);
+distância = min(64.0f, 128.0f);
+ganho = 1.0f / 1.0f + 1.0f * (64.0f - 1.0f);
+ganho = 0.0039f;
