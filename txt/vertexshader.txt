@@ -1,4 +1,0 @@
- - Popósito final: Colocar tudo em coordenadas de clip - [-1, 1].
- - Sobre uniformes: se efetivamente meu shader não a estiver usando a localização uniforme é = -1
- - Layout coluna principal {x.x x.y x.z 0 | y.x y.y y.z 0 | z.x z.y z.z 0| w.x w.y w.z 1},  pré-multiplicação da matriz pelo vetor, se transposta idem abaixo
- - Layout linha principal  {x.x x.y x.z x.w | y.x y.y y.z y.w | z.x z.y z.z z.w | 0 0 0 1},  pós-multiplicação da matriz pelo vetor, se transposta idem ao acima
