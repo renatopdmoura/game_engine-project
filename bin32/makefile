@@ -2,12 +2,12 @@ OBJS = ../libraries/GUI/GUI.cpp ../libraries/GUI/Panel.cpp ../libraries/GUI/Chec
 OBJ_NAME = main.exe
 CC = g++
 INCLUDE_PATHS = -I../include/SDL2 -I../include/OpenGL -I../include/OpenAL -I../include/freetype -I../include
-LIBRARY_PATHS = -L../lib32 -L../lib/freetype
-LINKER_FLAGS  = -std=c++17 -lmingw32 -lSDL2main -lSDL2 -lSDL2_mixer -lglew32 -lOpenGL32 -lOpenAL32 -lfreetype
+LIBRARY_PATHS = -L../lib32 -L../lib32/freetype
+LINKER_FLAGS  = -std=c++17 -lmingw32 -lSDL2main -lSDL2 -lglew32 -lOpenGL32 -lOpenAL32 -lfreetype
 COMPILE_FLAGS = -W -isystem -mwindows
 
 all: $(OBJS)
 	$(CC) $(OBJS) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILE_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
 
 # -W : warnings
-#-isystem : console output
+#-isystem : console outputcls

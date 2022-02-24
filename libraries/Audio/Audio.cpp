@@ -156,7 +156,7 @@ void Audio::stopAll(){
 
 void Audio::selectByDistance(vec3<float>& position){
 	for(std::vector<Audio*>::iterator it = bgmStack.begin(); it != bgmStack.end(); ++it)
-		(*it)->selectSources(position);
+		(*it)->selectSources(position);		
 	for(std::vector<Audio*>::iterator it = sfxStack.begin(); it != sfxStack.end(); ++it)
 		(*it)->selectSources(position);
 }
@@ -265,15 +265,40 @@ void Audio::stop(){
 
 
 void Audio::selectSources(vec3<float>& position){
-	for(uint i = 0; i < stackEmitters.size(); ++i){
-		ALint state    = 0;
-		float distance = length(position, stackEmitters[i].position);
-		float range    = stackEmitters[i].range;
-		alGetSourcei(sources[i], AL_SOURCE_STATE, &state);
-		if(state == AL_PAUSED)
-			alSourcePlay(sources[i]);
-		if(distance > range){
-			alSourcePause(sources[i]);
+	if(type == SFX){
+		for(uint i = 0; i < stackEmitters.size(); ++i){
+			ALint state    = 0;
+			float distance = length(position, stackEmitters[i].position);
+			float range    = stackEmitters[i].range;
+			alGetSourcei(sources[i], AL_SOURCE_STATE, &state);
+			if(state == AL_PAUSED)
+				alSourcePlay(sources[i]);
+			if(distance > range){
+				alSourcePause(sources[i]);
+			}
+		}
+	}
+	else if(type == BGM){
+		for(uint i = 0; i < stackEmitters.size(); ++i){
+			ALint state     = 0;
+			float distance  = length(position, stackEmitters[i].position);
+			float range     = stackEmitters[i].range;
+			float reference = stackEmitters[i].reference; 
+			float lerp = distance > reference? distance: reference;
+			lerp = distance < range? distance: range;
+			stackEmitters[i].relgain = stackEmitters[i].gain - stackEmitters[i].rolloff * (lerp - reference) / (range - reference);
+			stackEmitters[i].relgain = stackEmitters[i].relgain < 0.0f? 0.0f: stackEmitters[i].relgain;
+			alGetSourcei(sources[i], AL_SOURCE_STATE, &state);
+			if(state == AL_STOPPED)
+				alSourcePlay(sources[i]);
+			if(distance < range & distance > reference){
+				if(state == AL_INITIAL)
+					alSourcePlay(sources[i]);
+				alSourcef(sources[i], AL_GAIN, stackEmitters[i].relgain);
+			}
+			if(distance > range){
+				alSourceStop(sources[i]);
+			}
 		}
 	}
 }

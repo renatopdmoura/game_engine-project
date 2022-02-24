@@ -18,6 +18,7 @@ Camera::Camera(vec3<float> from, vec3<float> to, float theta, float near, float 
 	BACKFOWARD 	   = false;
 	LEFT 		   = false;
 	RIGHT     	   = false;
+	COLLISION_DETECTION = false;
 }
 
 void Camera::keyboardEvent(SDL_Event* event){
@@ -170,7 +171,7 @@ float Camera::getSpeed() const{
 }
 
 float Camera::getSensitivity() const{
-	float sensitivity;
+	return sensitivity;
 }
 
 float Camera::getFar() const{

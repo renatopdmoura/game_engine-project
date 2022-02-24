@@ -1,5 +1,8 @@
 #include "GUI.hpp"
 
+std::vector<vec2<uint>> GUI_Scale::resolutions = {
+	{1024, 768}, {1280, 720}, {1440, 900}, {1920, 1080}
+};
 std::vector<GUI*> GUI::stack;
 uint GUI::uboGUI    	          = 0;
 uint GUI::ubBinding               = 5;
@@ -52,6 +55,16 @@ void GUI::updateBuffer(){
 	bool isNode = parent != NULL? true: false;	
 	// - As coordenadas do objeto dependem da janela de visualização
 	if(layout == ON_WINDOW){
+		// - Objetos que têm a janela diretamente como pai, mantém as dimensões originais independente da resolução.
+		for(uint i = 0; i < GUI_Scale::resolutions.size(); ++i){
+			if(!scale.percentages.empty()){
+				if(GUI_Scale::resolutions[i].w == (uint)ext_screen_width && GUI_Scale::resolutions[i].h == (uint)ext_screen_height){
+					ratio.z = scale.percentages[i].w;
+					ratio.w = scale.percentages[i].h;
+					break;
+				}
+			}
+		}
 		if(type == PANEL || type == CHECKBOX){
 			resolution.w = ratio.z * (float)ext_screen_width / 100.0f;
 			resolution.h = ratio.w == 0.0f? resolution.w: ratio.w * (float)ext_screen_height / 100.0f;
@@ -303,6 +316,11 @@ void GUI::setType(GUI_Type guiType){
 
 void GUI::setPanelLayout(GUI_PanelLayout distribute){
 	layout = distribute;
+}
+
+void GUI::setResponsiveScale(std::vector<vec2<float>> values){
+	scale.percentages = values;
+	updateBuffer();
 }
 
 void GUI::setBackgroundColor(vec4<float> color){

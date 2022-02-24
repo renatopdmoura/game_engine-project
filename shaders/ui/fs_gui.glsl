@@ -29,7 +29,7 @@ void main(){
 	if(canvasCoord.y > fHeaderMinY && canvasCoord.y < fHeaderMaxY)
 		fragment = vec4(ID, 1.0f);
 	else
-		fragment = vec4(vec3(0.2f, 0.2f, 0.3f), 0.2f);
+		fragment = vec4(vec3(0.2f, 0.2f, 0.3f), 1.0f);
 	if((H || V) && fBorderThickness > 0.0f)
-		fragment = vec4(vec3(0.0f, 0.2f, 0.3f), 0.4f);
+		fragment = vec4(vec3(0.0f, 0.2f, 0.3f), 1.0f);
 }

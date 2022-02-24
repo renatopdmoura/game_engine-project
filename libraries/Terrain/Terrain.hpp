@@ -34,13 +34,21 @@ public:
 		addTexture(root + pathRough, "material.roughness[1]", 5);
 		addTexture(root + pathAO, "material.ao[1]", 7);
 	}
-	void setPathTex(std::string pathMask, std::string pathAlbedo, std::string pathNormal, std::string pathRough, std::string pathAO){
+	void setPathTex0(std::string pathMask, std::string pathAlbedo, std::string pathNormal, std::string pathRough, std::string pathAO){
 		std::string root = "../assets/textures/terrain/";
-		addTexture("../assets/textures/terrain/paths/" + pathMask, "material.pathMask", 8);
+		addTexture("../assets/textures/terrain/paths/" + pathMask, "material.pathMask[0]", 8);
 		addTexture(root + pathAlbedo, "material.albedo[2]", 9);
 		addTexture(root + pathNormal, "material.normal[2]", 10);
 		addTexture(root + pathRough, "material.roughness[2]", 11);
 		addTexture(root + pathAO, "material.ao[2]", 12);
+	}
+	void setPathTex1(std::string pathMask, std::string pathAlbedo, std::string pathNormal, std::string pathRough, std::string pathAO){
+		std::string root = "../assets/textures/terrain/";
+		addTexture("../assets/textures/terrain/paths/" + pathMask, "material.pathMask[1]", 13);
+		addTexture(root + pathAlbedo, "material.albedo[3]", 14);
+		addTexture(root + pathNormal, "material.normal[3]", 15);
+		addTexture(root + pathRough, "material.roughness[3]", 16);
+		addTexture(root + pathAO, "material.ao[3]", 17);
 	}
 	#if RENDER_DEBUG_MODE
 		void renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar);

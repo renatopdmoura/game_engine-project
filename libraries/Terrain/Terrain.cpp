@@ -5,12 +5,13 @@
 		setProgram(SRW::debugPrograms[0]);
 		setUniform1f("zNear", zNear);
 		setUniform1f("zFar", zFar);
-		setUniformMat4f("model", &model);
+		setUniformMat4f("debug_depth_model", &model);
 		setUniformMat4f("viewProj", &viewProj);
 	}
+	
 	void Terrain::renderDebugNormal(mat4<float>& view, mat4<float>& projection){
 		setProgram(SRW::debugPrograms[1]);
-		setUniformMat4f("model", &model);	
+		setUniformMat4f("debug_normal_model", &model);	
 		setUniformMat4f("view", &view);
 		setUniformMat4f("projection", &projection);
 	}
@@ -50,7 +51,7 @@ void Terrain::getHeightAt(vec3<float>& position){
 	float halfWidth     = terrainWidth * 0.5f;
 	float halfHeight    = terrainHeight * 0.5f;
 
-	mat4<float> localMatrix   = model.inverse();
+	mat4<float> localMatrix   = inverse(model);
 	vec3<float> terrainPos    = position * localMatrix;
 	vec3<float> invBlockScale = vec3f(1.0f / blockScale, 0.0f, 1.0f / blockScale);
 	vec3<float> offset        = vec3f(halfWidth, 0.0f, halfHeight);
@@ -151,7 +152,7 @@ void Terrain::render(){
 	initUnif1f();
 	initUnif3f();
 	initUnifMat4f();
-	// glUniformMatrix4fv(glGetUniformLocation(program, "normalSpace"), 1, GL_FALSE, &model.inverse().transpose()[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(SRW::programs[TERRAIN_PROGRAM], "normalSpace"), 1, GL_FALSE, &inverse(model).transpose()[0][0]);
 	glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, NULL);
 }
 

@@ -22,8 +22,8 @@ uniform mat4 model;
 uniform mat4 normalSpace;
 
 void main(){
-	mat3 NS = mat3(transpose(inverse(model)));
-	// mat3 NS = mat3(normalSpace);
+	// mat3 NS = mat3(transpose(inverse(model)));
+	mat3 NS = mat3(normalSpace);
 	vec3 T  = normalize(NS * tangent);
 	vec3 N  = normalize(NS * normal);
 	T       = normalize(T - dot(T, N) * N);

@@ -70,6 +70,17 @@ struct mat4{
 		}
 		return result; 
 	}
+	
+	mat4 operator*(const T value){
+		mat4<T> m;
+		for(unsigned short i = 0; i < 4; ++i){
+			for(unsigned short j = 0; j < 4; ++j){
+				m[i][j] = matrix[i][j] * value;
+			}
+		}
+		return m;
+	}
+
 	void show(std::string name) const{
 		std::cout << std::setw(22) << name << ":" << std::endl;
 		for(unsigned short i = 0; i < 4; ++i){
@@ -89,55 +100,15 @@ struct mat4{
 		return m;
 	}
 
-	mat4 inverse(){
-		mat4 m, n;
-		m = *this;
-		for(unsigned j = 0; j < 4; ++j){
-			//Step 1
-			if(matrix[j][j] == 0.0f){
-				unsigned big = j;
-				for(unsigned i = 0; i < 4; ++i){
-					if(fabs(matrix[i][j]) > fabs(matrix[big][j]))
-						big = i;
-				}
-				if(big == j)
-					std::cout <<"Singular matrix!" << std::endl;
-				else{
-					T save_m[] = {m[j][0], m[j][1], m[j][2], m[j][3]};
-					T save_n[] = {n[j][0], n[j][1], n[j][2], n[j][3]};
-					for(unsigned k = 0; k < 4; ++k){
-						m[j][k]     = matrix[big][k];
-						m[big][k]   = *(save_m + k);
-						n[j][k]     = n[big][k];
-						n[big][k]   = *(save_n + k);
-					}
-				}
-			}
-			//Step 2
-			for(unsigned i = 0; i < 4; ++i){
-				if(i != j){
-					T coeff = m[i][j] / m[j][j];
-					if(coeff != 0.0f){
-						for(unsigned k = 0; k < 4; ++k){
-							m[i][j] -= coeff * m[j][k];
-							n[i][j] -= coeff * n[j][k];
-						}
-						m[i][j] = 0.0f;
-					}
-				}
+	void null(){
+		for(uint i = 0; i < 4; i++){
+			for(uint j = 0; j < 4; ++j){
+				matrix[i][j] = 0;
 			}
 		}
-		for(unsigned i = 0; i < 4; ++i){
-			for(unsigned j = 0; j < 4; ++j){
-				n[i][j] /= m[i][i];
-			}
-		}	
-		return n;
 	}
-
 	T matrix[4][4];
 };
-
 
 template <class T>
 struct vec2{
@@ -269,7 +240,7 @@ struct vec4 : public vec3<T>{
 	vec4(T value_x, T value_y, T value_z, T value_w = 1) : vec3<T>(value_x, value_y, value_z){
 		w = value_w;
 	}
-	vec4(vec3<T>& obj, T value_w = 1){
+	vec4(vec3<T> obj, T value_w = 1){
 		vec3<T>::x = obj.x;
 		vec3<T>::y = obj.y;
 		vec3<T>::z = obj.z;
@@ -312,6 +283,7 @@ struct vec4 : public vec3<T>{
 		return result;
 	}
 	vec4 operator*(const mat4<T>& mat) const{
+		// - Vetor linha a esquerda da matriz, vetor linha x matriz coluna
 		vec4 result;
 		result.x = vec3<T>::x * mat[0][0] + vec3<T>::y * mat[1][0] + vec3<T>::z * mat[2][0] +  w * mat[3][0];
 		result.y = vec3<T>::x * mat[0][1] + vec3<T>::y * mat[1][1] + vec3<T>::z * mat[2][1] +  w * mat[3][1];
@@ -324,6 +296,19 @@ struct vec4 : public vec3<T>{
 		out.w = w != 0.0f? result.w / result.w: 0.0f;
 		return out;
 	}
+	T& operator[](uint index){
+		switch(index){
+			case 0: return vec3<T>::x; break;
+			case 1: return vec3<T>::y; break;
+			case 2: return vec3<T>::z; break;
+			case 3: return w; break;
+			default:
+				std::cout << "vec4 Error::Acess address violation: Index out range." << std::endl;
+				exit(1);
+				break;
+		}
+	}
+
 	void show(std::string name) const{
 		std::cout << std::setw(10) << name << ":";
 		std::cout << std::setw(10) << "[ " << vec3<T>::x << " " << vec3<T>::y << " " << vec3<T>::z << " " << w << " ]\n";
@@ -356,6 +341,31 @@ typedef mat4<double> mat4d;
 
 const float PI = 3.141516f;
 
+template<typename T>
+T max(T A, T B){
+	return (A > B? A: B);
+}
+
+template<typename T>
+T min(T A, T B){
+	return (A < B? A: B);
+}
+
+template<typename T>
+vec4<T> mat4xvec4(mat4<T> M, vec4<T> V){
+	// - Vetor coluna a direita da matrix, matrix linha x vetor culuna
+	vec4<T> result;
+	T sum = 0;
+	for(uint i = 0; i < 4; ++i){
+		for(uint j = 0; j < 4; ++j){
+			sum += M[i][j] * V[j];
+		}
+		result[i] = sum;
+		sum = 0;
+	}
+	return result;
+}
+
 template<typename  T>
 T radians(T angle){
 	return ((angle * PI) / 180.0);
@@ -381,7 +391,7 @@ T dot(const vec3<T>& a, const vec3<T>& b){
 }
 
 template<typename T>
-T length(vec3<T>& a, vec3<T>& b){
+T length(vec3<T> a, vec3<T> b){
 	vec3<T> major, minor;
 	if(a > b){
 		major = a;
@@ -391,8 +401,49 @@ T length(vec3<T>& a, vec3<T>& b){
 		major = b;
 		minor = a;
 	}
-	vec3<float> vector = major - minor;
+	vec3<float> vector = a - b;
 	return sqrt(vector.x * vector.x + vector.y * vector.y + vector.z * vector.z);
+}
+
+template<typename T>
+mat4<T> inverse(mat4<T> m){
+	mat4<T> C;
+	C.null();
+	mat4<T> A;
+	T e[9];
+	for(uint i = 0; i < 4; ++i){
+		for(uint j = 0; j < 4; ++j){
+			// uint line = i;
+			// uint column = j;
+			uint index = 0;
+			C.null();
+			
+			for(uint k = 0; k < 4; ++k){
+				for(uint l = 0; l < 4; ++l){
+					if(k == i || l == j)
+						continue;
+					e[index] = m[k][l];
+					index++;
+				}
+			}			
+			C[0][0] = e[0];
+			C[0][1] = e[1];
+			C[0][2] = e[2];
+			C[1][0] = e[3];
+			C[1][1] = e[4];
+			C[1][2] = e[5];
+			C[2][0] = e[6];
+			C[2][1] = e[7];
+			C[2][2] = e[8];
+			T principal = (C[0][0] * C[1][1] * C[2][2]) + (C[0][1] * C[1][2] * C[2][0]) * (C[0][2] * C[1][0] * C[2][1]);
+			T secundary = (C[2][0] * C[1][1] * C[0][2]) + (C[2][1] * C[1][2] * C[0][0]) + (C[2][2] * C[1][0] * C[0][1]);
+			T result = principal - secundary;
+			A[i][j] = pow(-1, i + j) * result;
+		}
+	}
+	T det = (m[0][0] * A[0][0]) + (m[1][0] * A[1][0]) + (m[2][0] * A[2][0]) + (m[3][0] * A[3][0]);
+	A =  A.transpose() *  (1.0f / det);
+	return A;
 }
 
 template<typename T>
@@ -486,6 +537,7 @@ mat4<T> orthographic(T l, T r, T b, T t){
 	result[3][1] = - (t + b) / (t - b);
 	return result;
 }
+
 template<typename T>
 mat4<T> translate(vec3<T> v){
 	mat4<T> matrix;
@@ -494,6 +546,7 @@ mat4<T> translate(vec3<T> v){
 	matrix[3][2] += v.z;
 	return matrix;
 }
+
 template<typename T>
 mat4<T> scale(vec3<T> v){
 	mat4<T> matrix;

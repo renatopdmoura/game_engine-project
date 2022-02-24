@@ -20,13 +20,15 @@ layout(binding = 0, shared) uniform PointLight{
 }pointLight; 
 
 uniform struct Material{
-	sampler2D pathMask;
-	sampler2D albedo[3];
-	sampler2D normal[3];
-	sampler2D roughness[3];
-	sampler2D ao[3];
+	sampler2D pathMask[2];
+	sampler2D albedo[4];
+	sampler2D normal[4];
+	sampler2D roughness[4];
+	sampler2D ao[4];
 	float metallic;
 }material;
+
+uniform float fHeight;
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0);
 float distributionGGX(vec3 N, vec3 H, float roughness);
@@ -34,6 +36,7 @@ float geometrySchlickGGX(float NdotV, float roughness);
 float geometrySmith(vec3 N, vec3 V, vec3 L, float roughness);
 
 void main(){
+	float fScale = vs_out.fragWorldPos.y / 40.0f;
 	vec2 fTexCoords = vs_out.texCoords * 100.0f;
 	float fWeight = 0.75f;
 	float fTexContribuition = clamp(dot(vs_out.normal, vec3(0.0f, 1.0f, 0.0f)), 0.0f, 1.0f);
@@ -44,7 +47,7 @@ void main(){
 
 	vec4 albedo_blended = vec4(0);
 	albedo_blended += texture(material.albedo[0], fTexCoords).rgba * W1;
- 	albedo_blended += texture(material.albedo[1], fTexCoords).rgba * W2;
+	albedo_blended += texture(material.albedo[1], fTexCoords).rgba * W2;
 	
 	vec4 normal_blended = vec4(0);
  	normal_blended += texture(material.normal[0], fTexCoords).rgba * W1;
@@ -58,16 +61,22 @@ void main(){
 	ao_blended += texture(material.ao[0], fTexCoords).ra * W1;
 	ao_blended += texture(material.ao[1], fTexCoords).ra * W2;
 	
-	float mask 		   = texture(material.pathMask, vs_out.texCoords).r;	
-	vec4 texAlbedo 	   = albedo_blended * mask + texture(material.albedo[2], fTexCoords) * (1.0f - mask);
-	vec4 texNormal     = normal_blended * mask + texture(material.normal[2], fTexCoords) * (1.0f - mask);
-	vec2 texRoughness  = roughness_blended * mask + texture(material.roughness[2], fTexCoords).ra * (1.0f - mask);
-	vec2 texAO  	   = ao_blended * mask + texture(material.ao[2], fTexCoords).ra * (1.0f - mask);
+	float mask0		   = texture(material.pathMask[0], vs_out.texCoords).r;	
+	vec4 texAlbedo0    = albedo_blended * mask0 + texture(material.albedo[2], fTexCoords) * (1.0f - mask0);
+	vec4 texNormal0    = normal_blended * mask0 + texture(material.normal[2], fTexCoords) * (1.0f - mask0);
+	vec2 texRoughness0 = roughness_blended * mask0 + texture(material.roughness[2], fTexCoords).ra * (1.0f - mask0);
+	vec2 texAO0 	   = ao_blended * mask0 + texture(material.ao[2], fTexCoords).ra * (1.0f - mask0);
 
-	vec3 albedo     = vec3(texAlbedo);
-	vec3 normal     = vs_out.TBN * vec3(texNormal);
-	float roughness = texRoughness.r;
-	float ao  		= texAO.r;
+	float mask1		   = texture(material.pathMask[1], vs_out.texCoords).r;	
+	vec4 texAlbedo1    = texAlbedo0 * mask1 + texture(material.albedo[3], fTexCoords) * (1.0f - mask1);
+	vec4 texNormal1    = texNormal0 * mask1 + texture(material.normal[3], fTexCoords) * (1.0f - mask1);
+	vec2 texRoughness1 = texRoughness0 * mask1 + texture(material.roughness[3], fTexCoords).ra * (1.0f - mask1);
+	vec2 texAO1 	   = texAO0 * mask1 + texture(material.ao[3], fTexCoords).ra * (1.0f - mask1);	
+
+	vec3 albedo     = vec3(texAlbedo1);
+	vec3 normal     = vs_out.TBN * vec3(texNormal1);
+	float roughness = texRoughness1.r;
+	float ao  		= texAO1.r;
 
 	vec3 N = normal;
 	vec3 V = normalize(vs_out.cameraPos - vs_out.fragWorldPos);
@@ -76,7 +85,7 @@ void main(){
 	F0 = mix(F0, albedo, material.metallic);
 
 	vec3 Lo = vec3(0.0f);
-	for(int i = 3; i < COUNT_POINT_LIGHT; ++i){
+	for(int i = 0; i < COUNT_POINT_LIGHT; ++i){
 		vec3 position  = vs_out.cameraPos;
 		vec3 colors    = vec3(pointLight.color[i]);
 		//Calculate per-light radiance

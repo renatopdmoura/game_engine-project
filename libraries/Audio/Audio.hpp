@@ -42,6 +42,7 @@ public:
 	float range;
 	float rolloff;
 	float gain;
+	float relgain;
 	int format;
 	float angle;
 	uint program;

@@ -10,32 +10,124 @@
 #include "Object.hpp"
 
 std::vector<Object*> Object::stack;
+float Object::forceG = 0.5f;
 
 #if RENDER_DEBUG_MODE
-	void Object::renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar){
-		for(uint i = 0; i < Object::stack.size(); ++i){
-			Object::stack[i]->setProgram(SRW::debugPrograms[0]);
-			Object::stack[i]->setUniform1f("zNear", zNear);
-			Object::stack[i]->setUniform1f("zFar", zFar);
-			Object::stack[i]->setUniformMat4f("viewProj", &viewProj);
-			Object::stack[i]->setUniformMat4f("model", &Object::stack[i]->getModel());
-		}
+void Object::renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar){
+	for(uint i = 0; i < Object::stack.size(); ++i){
+		Object::stack[i]->setProgram(SRW::debugPrograms[0]);
+		Object::stack[i]->setUniform1f("zNear", zNear);
+		Object::stack[i]->setUniform1f("zFar", zFar);
+		Object::stack[i]->setUniformMat4f("viewProj", &viewProj);
+		Object::stack[i]->setUniformMat4f("debug_depth_model", &Object::stack[i]->getModel());
 	}
+}
 
-	void Object::renderDebugNormal(mat4<float>& view, mat4<float>& projection){
-		for(uint i = 0; i < Object::stack.size(); ++i){
-			Object::stack[i]->setProgram(SRW::debugPrograms[1]);
-			Object::stack[i]->setUniformMat4f("view", &view);
-			Object::stack[i]->setUniformMat4f("projection", &projection);
-			Object::stack[i]->setUniformMat4f("model", &Object::stack[i]->getModel());
+void Object::renderDebugNormal(mat4<float>& view, mat4<float>& projection){
+	for(uint i = 0; i < Object::stack.size(); ++i){
+		Object::stack[i]->setProgram(SRW::debugPrograms[1]);
+		Object::stack[i]->setUniformMat4f("view", &view);
+		Object::stack[i]->setUniformMat4f("projection", &projection);
+		Object::stack[i]->setUniformMat4f("debug_normal_model", &Object::stack[i]->getModel());
+	}
+}
+
+void Object::select(Camera& camera, SDL_Event* event, std::vector<Text>& objList){
+	// - In use ray casting and sphere collision test
+	Object* obj = NULL;
+	if(event->type == SDL_MOUSEBUTTONDOWN){
+		if(event->button.button == SDL_BUTTON_LEFT){
+			for(std::vector<Object*>::iterator it = Object::stack.begin(); it != Object::stack.end(); ++it){
+				// - Screen Coordinates to NDC[-1, 1]
+				float x = 2.0f * (float)event->motion.x / (float)ext_screen_width - 1.0f;
+				float y = 2.0f * (ext_screen_height - event->motion.y) / ext_screen_height - 1.0f; 		
+				
+				// - Get ray in world space		
+				vec3<float> rayBegin = camera.getPosition();
+				vec4<float> rayEnd   = vec4<float>(x, y, 1.0f, 1.0f) * inverse(camera.getProjectionMatrix()); // - Do perspective division
+				rayEnd = mat4xvec4(inverse(camera.getViewMatrix().transpose()), vec4<float>(rayEnd.x, rayEnd.y, rayEnd.z, 1.0f));
+							
+				// - Get sphere parameters and test collision
+				vec3<float> centerSphere = vec3<float>((*it)->getModel()[3][0], (*it)->getModel()[3][1], (*it)->getModel()[3][2]);
+				
+				// - Get radius sphere by greatest absolute value from scale component
+				float radius = 0.0f;
+				if((*it)->getModel()[0][0] >= (*it)->getModel()[1][1] && (*it)->getModel()[1][1] >= (*it)->getModel()[2][2])
+					radius = (*it)->getModel()[0][0];
+				else if((*it)->getModel()[1][1] >= (*it)->getModel()[2][2])
+					radius = (*it)->getModel()[1][1];
+				else
+					radius = (*it)->getModel()[2][2];
+
+				// - Ensures that the ray is not launched from inside the sphere
+				if(length(centerSphere, rayBegin) < radius){
+					// std::cout << "Inside sphere!\n";
+					continue;
+				}
+
+				vec3<float> dirToSphere  = centerSphere - rayBegin;
+				vec3<float> dirLine      = normalize(rayEnd - rayBegin);
+				float lenLine            = length(rayBegin, rayEnd);
+				float t = dot(dirLine, dirToSphere);
+				vec3<float> closestPoint;
+				if(t <= 0.0f){
+					closestPoint = rayBegin;
+					if(t == 0.0f){
+						// std::cout << "Tangent crossing!\n";
+						continue;
+					}
+					else if(t < 0.0f){ 
+						// std::cout << "Missing intersection!\n";
+						continue;
+					}
+				}
+				if(t >= lenLine){
+					closestPoint = rayEnd;
+					// std::cout << "Object is beyond depth selectable.\n";
+					continue;
+				}
+				closestPoint = rayBegin + dirLine * t;
+				if(length(centerSphere, closestPoint) <= radius){
+					obj = *it;
+				}
+			}
 		}
 	}
+	if(obj != NULL){
+		for(uint i = 0; i < objList.size(); ++i){
+			if(objList[i].getLabel() == obj->getName()){
+				objList[i].setTextColor(vec3<float>(1.0f, 1.0f, 0.0f));
+			}
+			if(objList[i].getLabel() != obj->getName()){
+				objList[i].setTextColor(vec3<float>(0.9f));
+			}
+		}
+	}
+}
 #endif
 
-// - Verifica se todos os dados para o sombreador pbr foram definidos
+void Object::renameIfExists(){
+	std::string nameComparison = "UNKNOWN";
+	uint nameRepetitions       = 0;
+	for(std::vector<Object*>::iterator it = Object::stack.begin(); it != Object::stack.end(); ++it){
+		nameRepetitions = 0;
+		nameComparison  = (*it)->getName();
+		for(std::vector<Object*>::iterator is = Object::stack.begin(); is < Object::stack.end(); ++is){
+			if(nameComparison.compare((*is)->getName()) == 0){
+				(*it)->setName(Text::uppercase((*it)->getName()) + (nameRepetitions > 0? std::to_string(nameRepetitions): ""));
+				nameRepetitions++;					
+			}
+			else
+				(*it)->setName(Text::uppercase((*it)->getName()));
+		}
+	}
+}
+
+// - Verifica se todos os dados para o sombreador PBR foram definidos
 void Object::completeness(){
 	bool success = true;
 	if(!stack.empty()){
+		Object::renameIfExists();
 		for(uint i = 0; i < stack.size(); ++i){
 			std::cout  << std::endl << "Object name: " << stack[i]->getName() << std::endl;
 			if(stack[i]->searchUniform3f("material.albedo") == -1 && stack[i]->searchUniformSampler2D("material.albedo") == -1){
@@ -61,7 +153,7 @@ void Object::completeness(){
 	}
 }
 
-// - Para programas de sombreameto exlcusivos
+// - Para programas de sombreameto exclusivos
 Object::Object(std::string model_path, std::string vs_path, std::string fs_path){
 	Object::stack.push_back(this);
 	if(parser(model_path)){
@@ -134,7 +226,7 @@ void Object::render(){
 	initUnif1f();
 	initUnif3f();
 	initUnifMat4f();
-	// glUniformMatrix4fv(glGetUniformLocation(program, "normalSpace"), 1, GL_FALSE, &((model.inverse()).transpose())[0][0]);
+	glUniformMatrix4fv(glGetUniformLocation(SRW::programs[TEXTURIZED], "normalSpace"), 1, GL_FALSE, &inverse(model).transpose()[0][0]);
 	glDrawArrays(GL_TRIANGLES, 0, vertex.size() / 11);
 	glBindVertexArray(0);
 }
@@ -149,7 +241,7 @@ void Object::render(uint instances){
 	if(instanceMethod == UNIFORM_ARRAY){
 		for(uint i = 0; i < instances; ++i){
 			glUniformMatrix4fv(glGetUniformLocation(program, std::string("arrayModels[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, &(*arrayModel)[i][0][0]);
-			// glUniformMatrix4fv(glGetUniformLocation(program, std::string("normalSpace[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, &(*arrayModel)[i].inverse().transpose()[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(program, std::string("normalSpace[" + std::to_string(i) + "]").c_str()), 1, GL_FALSE, &inverse((*arrayModel)[i])[0][0]);
 		}
 	}
 	else
@@ -280,7 +372,7 @@ void Object::instantiate(std::vector<mat4<float>>* matrices, uint method){
 				std::cerr << "ERROR::An error occurred getting the minimum size for the buffer!" << std::endl;
 			else{
 				unsigned char* blockBuffer = new unsigned char[blockSize];
-				uint countMembers = 2;
+				const uint countMembers = 2;
 				const char* names[] = {"model", "normalSpace"};
 				uint indices[countMembers];
 				glGetUniformIndices(program, countMembers, names, indices);
@@ -298,7 +390,7 @@ void Object::instantiate(std::vector<mat4<float>>* matrices, uint method){
 					glGetActiveUniformsiv(program, countMembers, indices, GL_UNIFORM_OFFSET, offset.data());
 					for(uint i = 0; i < arrayModel->size(); ++i){
 						std::memcpy(blockBuffer + offset[0] + (sizeof(mat4<float>) * i), &(*arrayModel)[i][0][0], sizeof(mat4<float>));
-						std::memcpy(blockBuffer + offset[1] + (sizeof(mat4<float>) * i), &(*arrayModel)[i].inverse().transpose()[0][0], sizeof(mat4<float>));
+						// std::memcpy(blockBuffer + offset[1] + (sizeof(mat4<float>) * i), &(*arrayModel)[i].inverse().transpose()[0][0], sizeof(mat4<float>));
 					}
 					glGenBuffers(1, &UBO);
 					glBindBufferBase(GL_UNIFORM_BUFFER, 4, UBO);
@@ -315,7 +407,7 @@ void Object::updateInstances(){
 	int blockSize = arrayModel->size() * sizeof(mat4<float>) * 2;
 	for(uint i = 0; i < arrayModel->size(); ++i){
 		glBufferSubData(GL_UNIFORM_BUFFER, i * sizeof(mat4<float>), sizeof(mat4<float>), &(*arrayModel)[i][0][0]);
-		glBufferSubData(GL_UNIFORM_BUFFER, (i * sizeof(mat4<float>)) + (blockSize / 2), sizeof(mat4<float>), &(*arrayModel)[i].inverse().transpose()[0][0]);
+		// glBufferSubData(GL_UNIFORM_BUFFER, (i * sizeof(mat4<float>)) + (blockSize / 2), sizeof(mat4<float>), &(*arrayModel)[i]..transpose()[0][0]);
 
 	}	
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -552,17 +644,137 @@ bool Object::parser(std::string model_path){
 	return true;
 }
 
-std::string Object::getName(){
-	return name;
+void Object::pushMatrix(mat4<float> matrix){
+	model.identity();
+	transforms.push_back(matrix);
+	for(uint i = 0; i < transforms.size(); ++i){
+		model = model * transforms[i];
+	}
 }
 
-mat4<float>& Object::getModel(){
-	return model; 
+void Object::updateModelMatrixPerFrame(mat4<float> matrix){
+	model.identity();
+	for(uint i = 0; i < transforms.size(); ++i){
+		model = model * transforms[i];
+	}
+	model = model * matrix;
 }
 
-std::vector<float> Object::getVertexBufferArray(){
-	return vertex;
+// - Physics
+
+void Object::SpherexSphere(Camera& camera){
+	// - Gravity action
+	if(model[3][1] > model[1][1] + 0.1f) model[3][1] -= Object::forceG;
+	if(model[3][1] < model[1][1] + 0.1f) model[3][1] += model[1][1] + 0.1f - model[3][1];
+
+	// - Sphere Collision
+	vec3<float> centerSphere = vec3<float>(getModel()[3][0], getModel()[3][1], getModel()[3][2]);
+	float radiusSphere       = 1.0f; // - Definido para 1 temporariamente
+	
+	// - Ao realizar transformações de rotação, a diagonal principal não refletira mais a proporção de escala do objeto
+	if(getModel()[0][0] >= getModel()[1][1] && getModel()[1][1] >= getModel()[2][2]){
+		radiusSphere = getModel()[0][0];
+	}
+	else if(getModel()[1][1] >= getModel()[2][2]){
+		radiusSphere = getModel()[1][1];
+	}
+	else{
+		radiusSphere = getModel()[2][2];
+	}
+	float radiusCamera = 1.0f;
+	float distance     = length(centerSphere, camera.getPosition());
+	if(distance <= (radiusCamera + radiusSphere) + 0.5f){
+		camera.setPosition(cameraBeforeCollision);
+	}
+	else{
+		cameraBeforeCollision = camera.getPosition();
+	}
 }
+
+void Object::AABBxAABB(Camera& camera){
+	// - Gravity action
+	if(model[3][1] > model[1][1] + 0.1f) model[3][1] -= Object::forceG;
+	if(model[3][1] < model[1][1] + 0.1f) model[3][1] += model[1][1] + 0.1f - model[3][1];
+
+	
+	// - AABB Collision detecion
+	vec3<float> centerCamera = camera.getPosition();
+	vec3<float> centerObject = vec3<float>(getModel()[3][0], getModel()[3][1], getModel()[3][2]);
+	
+	// - Radius of the unitary cube
+	float radiusCube = 1.0f;
+	
+	// - Boundary vertices
+	vec3<float> A_min;
+	vec3<float> A_max;
+	vec3<float> B_min;
+	vec3<float> B_max;
+
+	A_min.x = centerCamera.x - radiusCube;
+	A_max.x = centerCamera.x + radiusCube;
+	A_min.y = centerCamera.y - radiusCube;
+	A_max.y = centerCamera.y + radiusCube;
+	A_min.z = centerCamera.z - radiusCube;
+	A_max.z = centerCamera.z + radiusCube;
+
+	B_min.x = centerObject.x - radiusCube;
+	B_max.x = centerObject.x + radiusCube;
+	B_min.y = centerObject.y - radiusCube;
+	B_max.y = centerObject.y + radiusCube;
+	B_min.z = centerObject.z - radiusCube;
+	B_max.z = centerObject.z + radiusCube;
+
+	if(((A_min.x <= B_max.x) && (A_max.x >= B_min.x)) && ((A_min.y <= B_max.y) && (A_max.y >= B_min.y)) && ((A_min.z <= B_max.z) && (A_max.z >= B_min.z))){
+		camera.setPosition(cameraBeforeCollision);
+	}
+	else{
+		cameraBeforeCollision = camera.getPosition();
+	}
+}
+
+void Object::AABBxSphere(Camera& camera){
+	// - Gravity action
+	if(model[3][1] > model[1][1] + 0.1f) model[3][1] -= Object::forceG;
+	if(model[3][1] < model[1][1] + 0.1f) model[3][1] += model[1][1] + 0.1f - model[3][1];
+
+	// - AABB and Sphere collision detection
+	vec3<float> centerCamera = camera.getPosition();
+	vec3<float> centerObject = vec3<float>(getModel()[3][0], getModel()[3][1], getModel()[3][2]);
+	float radiusSphere  = 1.0f; // - Definido temporariamente para 1
+	float radiusCube    = 1.0f; // - Definido temporariamente para 1
+	vec3<float> A_min;
+	vec3<float> A_max;
+	A_min.x = centerObject.x - radiusCube;
+	A_max.x = centerObject.x + radiusCube;
+	A_min.y = centerObject.y - radiusCube;
+	A_max.y = centerObject.y + radiusCube;
+	A_min.z = centerObject.z - radiusCube;
+	A_max.z = centerObject.z + radiusCube;
+
+	vec3<float> closestPoint;
+	closestPoint.x = max(A_min.x, min(centerCamera.x, A_max.x));
+	closestPoint.y = max(A_min.y, min(centerCamera.y, A_max.y));
+	closestPoint.z = max(A_min.z, min(centerCamera.z, A_max.z));
+
+	float distance = length(closestPoint, centerCamera);
+
+	if(distance < radiusSphere){
+		vec3<float> dir(closestPoint - centerCamera);
+		model = model * translate(dir * 4.0f);
+		camera.setPosition(cameraBeforeCollision);
+	}
+	else{
+		cameraBeforeCollision = camera.getPosition();
+	}
+}
+
+// - Setters
+
+void Object::setName(std::string pname){
+	name = pname;
+}
+
+// - Getters
 
 uint Object::getVAO() const{
 	return VAO;
@@ -570,4 +782,24 @@ uint Object::getVAO() const{
 
 uint Object::getVBO() const{
 	return VBO;
+}
+
+uint Object::getUBO() const{
+	return UBO;
+}
+
+uint Object::getShaderType() const{
+	return shaderType;
+}
+
+std::string Object::getName() const{
+	return name;
+}
+
+std::vector<float> Object::getVertexBufferArray(){
+	return vertex;
+}
+
+mat4<float>& Object::getModel(){
+	return model; 
 }

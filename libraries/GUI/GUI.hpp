@@ -17,6 +17,12 @@ enum GUI_PanelLayout{
 	ON_BODY
 };
 
+class GUI_Scale{
+public:
+	static std::vector<vec2<uint>> resolutions;
+	std::vector<vec2<float>> percentages;
+};
+
 class GUI : public SRW{
 public:
 	// - Factory functions
@@ -48,6 +54,7 @@ public:
 	void setOffset(vec2<float> off);
 	void setType(GUI_Type guiType);
 	void setPanelLayout(GUI_PanelLayout distribute);
+	void setResponsiveScale(std::vector<vec2<float>> values);
 	void setBackgroundColor(vec4<float> color);
 	void setHeaderHeight(float height);
 	void setBorderThickness(float thickness);	
@@ -104,6 +111,7 @@ protected:
 	GUI* parent;
 	GUI_Type type;
 	GUI_PanelLayout layout;
+	GUI_Scale scale;
 	std::function<void(void)> callback;	
 };
 #endif

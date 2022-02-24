@@ -8,10 +8,10 @@ out VS_OUT{
 }vs_out;
 
 uniform mat4 view;
-uniform mat4 model;
+uniform mat4 debug_normal_model;
 
 void main(){
-	mat3 NS       = mat3(transpose(inverse(view * model)));
+	mat3 NS       = mat3(transpose(inverse(view * debug_normal_model)));
 	vs_out.normal = normalize(NS * normal);
-	gl_Position   = view * model * position;
+	gl_Position   = view * debug_normal_model * position;
 }

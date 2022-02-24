@@ -37,7 +37,23 @@ class Camera{
 		float getSensitivity() const;	
 		float getFar() const;
 		float getNear() const;
-		
+
+		bool& isMovingRight(){
+			return RIGHT;
+		}
+
+		bool& isMovingLeft(){
+			return LEFT;
+		}
+
+		bool& isMovingFoward(){
+			return FOWARD;
+		}
+
+		bool& isMovingBackfoward(){
+			return BACKFOWARD;
+		}
+	
 		Audio* sfx;
 	private:
 		// - Matrices
@@ -60,11 +76,13 @@ class Camera{
 		bool FOWARD;
 		bool LEFT;
 		bool BACKFOWARD;
+		bool COLLISION_DETECTION;
 		float speed;
 
 		// - Frame time controls
 		float lastFrameTime;
 		float currentFrameTime;
 		float deltaTime;
+		
 	};
 #endif

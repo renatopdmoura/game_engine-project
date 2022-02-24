@@ -4,6 +4,7 @@ Checkbox::Checkbox(float x, float y, GUI_PanelLayout panelLayout, float w, float
 	setType(CHECKBOX);
 	setPanelLayout(panelLayout);
 	setID(GUI::instancesCount++);
+	setOn(false);
 	setBorderThickness(thickness);
 	setRatio(x, y, w, h);
 	rgbaMarkedColor   = marked;

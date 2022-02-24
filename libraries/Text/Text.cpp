@@ -1,6 +1,3 @@
-#include "Text.hpp"
-
-std::vector<Text*> Text::stack;
 /*
 	Teste 1
 	Cada glifo salvo leva a largura abosuluta do glifo pela altura nominal(tamanho da fonte).
@@ -13,6 +10,24 @@ std::vector<Text*> Text::stack;
 		> Sem erros de indexação
 		> Necessário resolver o rolamento vertical
 */
+
+
+// - Use o construtor padrão para criar instâncias não formatadas(como em vetores de objetos).
+// - Use o primeiro construtor para objetos em que o membro text deva ser reescrito por diversas vezes após a primeira chamada do construtor
+// - Use o segundo construtor para objetos em que o membro text será constante por todo programa
+// * Ambos construtores 1 e 2 não possuem restrição de uso e são definidos para melhorar a clareza do propósito de uso de um objeto Text.
+
+
+#include "Text.hpp"
+
+// - Auxiliary functions
+
+std::string Text::uppercase(std::string str){
+	for(std::string::iterator it = str.begin(); it != str.end(); ++it){
+		*it = toupper(*it);
+	}
+	return str;
+}
 
 std::vector<std::string> Text::read(std::string path){
 	std::ifstream file(path, std::ios_base::in);
@@ -47,24 +62,147 @@ std::vector<std::string> Text::read(std::string path){
 	}
 }
 
+// - Constructors
+
+Text::Text(){
+	texID     = 0;
+	fontSize  = 12;
+	pxSpacing = 2;
+	pxTab     = 50;
+}
+
+Text::Text(std::string path, uint px, float x, float y, GUI_PanelLayout inside, uint spacing, uint tab){
+	GUI::setType(TEXT);
+	GUI::setPanelLayout(inside);
+	GUI::setRatio(x, y, 0.0f, 0.0f);
+	GUI::setID(GUI::instancesCount++);	
+	fontSize    = px < 12? 12: px;
+	pxSpacing   = spacing;	
+	pxTab       = tab;
+	filepath    = path;
+}
+
 Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::string str, GUI_PanelLayout inside, uint spacing, uint tab){
 	// - Init memebers
-	GUI::stack.push_back(this);
-	type   = TEXT;
-	layout = inside;
-	setRatio(x, y, 0.0f, 0.0f);
+	GUI::setType(TEXT);
+	GUI::setPanelLayout(inside);
+	GUI::setRatio(x, y, 0.0f, 0.0f);
+	GUI::setID(GUI::instancesCount++);	
+	GUI::setRatio(x, y, 0.0f, 0.0f);
+	txtColor   = color;
 	fontSize   = px < 12? 12: px;
 	pxSpacing  = spacing;	
 	pxTab      = tab;
-	ID = GUI::instancesCount++;
+	filepath   = path;
+	write(str);
+}
 
-	// - Init freetype
+Text::Text(std::string path, uint px, float x, float y, vec3<float>color, uint type, std::string str){
+	txtColor = color;
 	FT_Library ft;
 	if(FT_Init_FreeType(&ft)){
 		std::cout << "Error: Couldn't init freeType library!" << std::endl;
 	}
 	FT_Face face;
 	if(FT_New_Face(ft, path.c_str(), 0, &face)){
+		std::cout << "Error: Failed to find font!" << std::endl;
+	}
+	FT_Set_Pixel_Sizes(face, 0, px);
+
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	switch(type){
+		case DYNAMIC:
+			for(unsigned char c = 0; c < 128; ++c){
+				if(FT_Load_Char(face, c, FT_LOAD_RENDER)){
+					std::cout << "Error: Failed to load glyph!" << std::endl;
+					continue;
+				}		
+				uint texID;
+				glGenTextures(1, &texID);
+				glBindTexture(GL_TEXTURE_2D, texID);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width, face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				Glyph glyph;
+				glyph.texID    = texID;
+				glyph.width    = face->glyph->bitmap.width;
+				glyph.rows     = face->glyph->bitmap.rows;
+				glyph.bearingX = face->glyph->bitmap_left;
+				glyph.bearingY = face->glyph->bitmap_top; 
+				glyph.advance  = face->glyph->advance.x;
+				glyphMap.insert(std::pair<unsigned char, Glyph>(c, glyph));
+			}
+			break;
+		case COUNTER:
+			str = "0123456789";	
+			for(uint i = 0; i < str.length(); ++i){
+				if(FT_Load_Char(face, str[i], FT_LOAD_RENDER)){
+					std::cout << "Error: Failed to load glyph!" << std::endl;
+					continue;
+				}		
+				uint texID;
+				glGenTextures(1, &texID);
+				glBindTexture(GL_TEXTURE_2D, texID);
+				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width, face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+				Glyph glyph;
+				glyph.texID    = texID;
+				glyph.width    = face->glyph->bitmap.width;
+				glyph.rows     = face->glyph->bitmap.rows;
+				glyph.bearingX = face->glyph->bitmap_left;
+				glyph.bearingY = face->glyph->bitmap_top; 
+				glyph.advance  = face->glyph->advance.x;
+				glyphMap.insert(std::pair<unsigned char, Glyph>(str[i], glyph));
+			}
+		break;
+	}
+	FT_Done_Face(face);
+	FT_Done_FreeType(ft);
+
+	SDL_GetWindowSize(ext_window, &ext_screen_width, &ext_screen_height);
+	GUI::setPosition(x, y);
+	marginLeft = GUI::getPosition().x;
+	genBuffers();
+	genShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_text.glsl");
+	setUniform3f("color", txtColor);	
+}
+
+// - Destructors
+
+Text::~Text(){
+	free();
+}
+
+void Text::free(){
+	glyphMap.clear();
+	glDeleteTextures(1, &texID);
+	glDeleteBuffers(1, &VBO);
+	glDeleteVertexArrays(1, &VAO);
+}
+
+// - Generate a bitmap thats represents a text from a string
+
+void Text::write(std::string str){
+	// - Linear search to check current object ID already exists in stack
+	bool id_already_exists = false;
+	for(uint i = 0; i < GUI::stack.size(); ++i){
+		if(GUI::stack[i]->getID() == GUI::ID)
+			id_already_exists = true;
+	}
+	if(!id_already_exists)
+		GUI::stack.push_back(this);
+	// - Init freetype
+	FT_Library ft;
+	if(FT_Init_FreeType(&ft)){
+		std::cout << "Error: Couldn't init freeType library!" << std::endl;
+	}
+	FT_Face face;
+	if(FT_New_Face(ft, filepath.c_str(), 0, &face)){
 		std::cout << "Error: Failed to find font!" << std::endl;
 	}
 	FT_Set_Pixel_Sizes(face, 0, fontSize);
@@ -189,108 +327,20 @@ Text::Text(std::string path, uint px, float x, float y, vec3<float> color, std::
 	            { position.x + resolution.w, position.y,  1.0f, 1.0f},
 	            { position.x + resolution.w, position.y + resolution.h, 1.0f, 0.0f}  
 			};
-
-
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(quad), quad);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	genShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_text.glsl");
-	setUniform3f("color", color);
+	setUniform3f("color", &txtColor);
 	setUniform1f("fOffsetX", &offset.x);
 	setUniform1f("fOffsetY", &offset.y);
 	addTexture(texID, "tex", 0);
 }
 
-Text::Text(std::string path, uint px, float x, float y, vec3<float>color, uint type, std::string str){
-	FT_Library ft;
-	if(FT_Init_FreeType(&ft)){
-		std::cout << "Error: Couldn't init freeType library!" << std::endl;
-	}
-	FT_Face face;
-	if(FT_New_Face(ft, path.c_str(), 0, &face)){
-		std::cout << "Error: Failed to find font!" << std::endl;
-	}
-	FT_Set_Pixel_Sizes(face, 0, px);
-
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-	switch(type){
-		case DYNAMIC:
-			for(unsigned char c = 0; c < 128; ++c){
-				if(FT_Load_Char(face, c, FT_LOAD_RENDER)){
-					std::cout << "Error: Failed to load glyph!" << std::endl;
-					continue;
-				}		
-				uint texID;
-				glGenTextures(1, &texID);
-				glBindTexture(GL_TEXTURE_2D, texID);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width, face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				Glyph glyph;
-				glyph.texID    = texID;
-				glyph.width    = face->glyph->bitmap.width;
-				glyph.rows     = face->glyph->bitmap.rows;
-				glyph.bearingX = face->glyph->bitmap_left;
-				glyph.bearingY = face->glyph->bitmap_top; 
-				glyph.advance  = face->glyph->advance.x;
-				glyphMap.insert(std::pair<unsigned char, Glyph>(c, glyph));
-			}
-			break;
-		case COUNTER:
-			str = "0123456789";	
-			for(uint i = 0; i < str.length(); ++i){
-				if(FT_Load_Char(face, str[i], FT_LOAD_RENDER)){
-					std::cout << "Error: Failed to load glyph!" << std::endl;
-					continue;
-				}		
-				uint texID;
-				glGenTextures(1, &texID);
-				glBindTexture(GL_TEXTURE_2D, texID);
-				glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, face->glyph->bitmap.width, face->glyph->bitmap.rows, 0, GL_RED, GL_UNSIGNED_BYTE, face->glyph->bitmap.buffer);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-				Glyph glyph;
-				glyph.texID    = texID;
-				glyph.width    = face->glyph->bitmap.width;
-				glyph.rows     = face->glyph->bitmap.rows;
-				glyph.bearingX = face->glyph->bitmap_left;
-				glyph.bearingY = face->glyph->bitmap_top; 
-				glyph.advance  = face->glyph->advance.x;
-				glyphMap.insert(std::pair<unsigned char, Glyph>(str[i], glyph));
-			}
-		break;
-	}
-	FT_Done_Face(face);
-	FT_Done_FreeType(ft);
-
-	SDL_GetWindowSize(ext_window, &ext_screen_width, &ext_screen_height);
-	position.x   = x;
-	position.y   = y;
-	xabs         = position.x;
-
-	genBuffers();
-	genShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_text.glsl");
-	setUniform3f("color", color);	
-}
-
-Text::~Text(){
-	free();
-}
-void Text::free(){
-	glDeleteTextures(1, &textureID);
-	glDeleteBuffers(1, &VBO);
-	glDeleteVertexArrays(1, &VAO);
-}
-
-void Text::write(std::string str){
-}
+// - Rendering
 
 void Text::render(std::string str){
-	position.x = xabs;
+	GUI::position.x = marginLeft;
 	glUseProgram(program);
 	glBindVertexArray(VAO);
 	initUnif3f();
@@ -302,7 +352,7 @@ void Text::render(std::string str){
 	for(c = text.begin(); c != text.end(); ++c){
 		if(*c == '\n'){
 			breakLine = true;
-			position.x = xabs;
+			GUI::position.x = marginLeft;
 			countLine++;
 			continue;
 		}
@@ -344,6 +394,28 @@ void Text::render(){
 	glUseProgram(0);	
 }
 
+void Text::picking(){
+	glBindVertexArray(VAO);
+	glBindBufferBase(GL_UNIFORM_BUFFER, GUI::ubBinding, GUI::uboGUI);
+	glUniform3fv(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "ID"), 1, vec3<float>((float)ID / 256.0f).address());
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetX"), offset.x);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetY"), offset.y);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosX"), position.x);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosY"), position.y);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fWidth"), resolution.w);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeight"), resolution.h);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeaderHeight"), resolution.h);
+	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fBorderThickness"), borderThickness);
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glBindVertexArray(0);
+	if(!childrens.empty()){
+		for(std::vector<GUI*>::iterator it = childrens.begin(); it != childrens.end(); ++it)
+			(*it)->picking();
+	}
+}
+
+// - Keyboard event
+
 void Text::enableTextInput(){
 	SDL_StartTextInput();
 }
@@ -369,42 +441,32 @@ void Text::keyboardEvent(SDL_Event* event, std::string& str){
 	}
 }
 
+// - General events
+
 void Text::events(SDL_Event* event){
 	// - Nothing to do...
 }
+
+// - Setters
 
 void Text::setSpacing(uint px){
 	pxSpacing = px;
 }
 
-void Text::picking(){
-	glBindVertexArray(VAO);
-	glBindBufferBase(GL_UNIFORM_BUFFER, GUI::ubBinding, GUI::uboGUI);
-	glUniform3fv(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "ID"), 1, vec3<float>((float)ID / 256.0f).address());
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetX"), offset.x);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fOffsetY"), offset.y);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosX"), position.x);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fPosY"), position.y);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fWidth"), resolution.w);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeight"), resolution.h);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fHeaderHeight"), resolution.h);
-	glUniform1f(glGetUniformLocation(SRW::programs[GUI_PROGRAM], "fBorderThickness"), borderThickness);
-	glDrawArrays(GL_TRIANGLES, 0, 6);
-	glBindVertexArray(0);
-	if(!childrens.empty()){
-		for(std::vector<GUI*>::iterator it = childrens.begin(); it != childrens.end(); ++it)
-			(*it)->picking();
-	}
+void Text::setTextColor(vec3<float> color){
+	txtColor = color;
 }
 
-void Text::renders(){
-	for(uint i = 0; i < stack.size(); ++i){
-		// stack[i]->render();
-	}
+// - Getters
+
+uint Text::getTexID() const{
+	return texID;
 }
 
-void Text::clean(){
-	for(uint i = 0; i < stack.size(); ++i){
-		stack[i]->free();
-	}
+std::string Text::getLabel() const{
+	return text;
+}
+
+vec3<float> Text::getTextColor(){
+	return txtColor;
 }
