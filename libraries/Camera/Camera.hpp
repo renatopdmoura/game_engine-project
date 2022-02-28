@@ -2,9 +2,12 @@
 #define CAMERA_H
 
 #include "../Math/Math.hpp"
-#include "../Audio/Audio.hpp"
 
-#include <SDL.h>
+// - SDL2
+#define SDL_MAIN_HANDLED
+#include "SDL2/SDL.h"
+
+// - Standart header files
 #include <functional>
 
 class Camera{
@@ -53,15 +56,13 @@ class Camera{
 		bool& isMovingBackfoward(){
 			return BACKFOWARD;
 		}
-	
-		Audio* sfx;
 	private:
 		// - Matrices
 		mat4<float> view;
 		mat4<float> projection;
 		mat4<float> viewProjection;
 
-		//- Camera control angle view
+		// - Camera control angle view
 		float yaw;
 		float pitch;
 		float fovy;
@@ -82,7 +83,6 @@ class Camera{
 		// - Frame time controls
 		float lastFrameTime;
 		float currentFrameTime;
-		float deltaTime;
-		
+		float deltaTime;		
 	};
 #endif

@@ -1,8 +1,8 @@
 {
   "ExpandedNodes": [
     "",
-    "\\bin64"
+    "\\lib64"
   ],
-  "SelectedNode": "\\bin64\\main.cpp",
+  "SelectedNode": "\\lib64\\assimp-vc142-mtd.lib",
   "PreviewInSolutionExplorer": false
 }

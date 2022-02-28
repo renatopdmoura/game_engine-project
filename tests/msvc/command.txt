@@ -1,0 +1,4 @@
+/I include
+main.cpp source/link_function_test.cpp
+assimp-vc142-mtd.lib
+/link /LIBPATH:lib64

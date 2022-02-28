@@ -1,8 +1,8 @@
 #version 460 core
 
 // - index size point lights
-const int COUNT_POINT_LIGHT = 3;
-const int COUNT_SPOT_LIGHT = 1;
+const int COUNT_POINT_LIGHT = 1;
+const int COUNT_SPOT_LIGHT = 0;
 const float PI = 3.14159265359;
 
 in struct VS_OUT{
@@ -16,8 +16,8 @@ in struct VS_OUT{
 out vec4 fragment;
 
 layout(binding = 0, shared) uniform PointLight{
-	vec4 position[3];
-	vec4 color[3];
+	vec4 position[1];
+	vec4 color[1];
 }pointLight; 
 
 layout(binding = 1, shared) uniform SpotLight{

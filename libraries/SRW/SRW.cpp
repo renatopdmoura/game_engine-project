@@ -14,16 +14,16 @@ std::vector<uint> SRW::gUBO(3);
 uint SRW::genProgramShader(std::string vs_path, std::string fs_path){
 	uint prog = 0;
 	if(createProgram(prog)){
-		bool vs_state = createShader(prog, GL_VERTEX_SHADER, readShaderSource(vs_path.c_str()));
-		bool fs_state = createShader(prog, GL_FRAGMENT_SHADER, readShaderSource(fs_path.c_str()));
+		bool vs_state = SRW::createShader(prog, GL_VERTEX_SHADER, SRW::readShaderSource(vs_path.c_str()));
+		bool fs_state = SRW::createShader(prog, GL_FRAGMENT_SHADER, SRW::readShaderSource(fs_path.c_str()));
 		try{
 			if(!vs_state || !fs_state) throw 0;
-			else if(!linkProgram(prog))	throw 1;
+			else if(!SRW::linkProgram(prog)) throw 1;
 		}
 		catch(const int exception){
 			switch(exception){
 				case 0: std::cerr << "Exception: Failed to create shader!\n"; break; 
-				case 1: std::cerr << "Exception: Failed to link to program!"; break;
+				case 1: std::cerr << "Exception: Failed to link to program!\n"; break;
 			}
 			exit(1);
 		}
@@ -52,16 +52,16 @@ uint SRW::genProgramShader(std::string vs_path, std::string gs_path, std::string
 	return prog;
 }
 
-void SRW::genProgramShaders(){
-	SRW::programs[UNIFORM_COLOR]   = SRW::genProgramShader("../shaders/object/vs.glsl", "../shaders/object/fs_uniform_color.glsl");
-	SRW::programs[TEXTURIZED]      = SRW::genProgramShader("../shaders/object/vs.glsl", "../shaders/object/fs_textured.glsl");
-	SRW::programs[TEXT_PROGRAM]    = SRW::genProgramShader("../shaders/new/vs.glsl", "../shaders/new/fs.glsl");
-	SRW::programs[TERRAIN_PROGRAM] = SRW::genProgramShader("../shaders/terrain/vs.glsl", "../shaders/terrain/fs.glsl");
-	SRW::programs[GUI_PROGRAM]     = SRW::genProgramShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_gui.glsl");
-	SRW::programs[GUI_PANEL_PROG]  = SRW::genProgramShader("../shaders/ui/vs_gui.glsl", "../shaders/ui/fs_panel.glsl");
+void SRW::genProgramShaders(std::string dir){
+	SRW::programs[UNIFORM_COLOR]   = SRW::genProgramShader(dir + "\\shaders\\object\\vs.glsl", dir + "\\shaders\\object\\fs_uniform_color.glsl");
+	SRW::programs[TEXTURIZED]      = SRW::genProgramShader(dir + "\\shaders\\object\\vs.glsl", dir + "\\shaders\\object\\fs_textured.glsl");
+	// SRW::programs[TEXT_PROGRAM]    = SRW::genProgramShader(dir + "/shaders/new/vs.glsl", dir + "/shaders/new/fs.glsl");
+	// SRW::programs[TERRAIN_PROGRAM] = SRW::genProgramShader(dir + "/shaders/terrain/vs.glsl", dir + "/shaders/terrain/fs.glsl");
+	// SRW::programs[GUI_PROGRAM]     = SRW::genProgramShader(dir + "/shaders/ui/vs_gui.glsl", dir + "/shaders/ui/fs_gui.glsl");
+	// SRW::programs[GUI_PANEL_PROG]  = SRW::genProgramShader(dir + "/shaders/ui/vs_gui.glsl", dir + "/shaders/ui/fs_panel.glsl");
 	#if RENDER_DEBUG_MODE
-		debugPrograms[0] = SRW::genProgramShader("../shaders/debug/vs_debug.glsl", "../shaders/debug/fs_debug_depth.glsl");
-		debugPrograms[1] = SRW::genProgramShader("../shaders/debug/vs_debug_normal.glsl", "../shaders/debug/gs_debug_normal.glsl", "../shaders/debug/fs_debug_normal.glsl");
+		debugPrograms[0] = SRW::genProgramShader(dir + "\\shaders\\debug\\vs_debug.glsl", dir + "\\shaders\\debug\\fs_debug_depth.glsl");
+		debugPrograms[1] = SRW::genProgramShader(dir + "\\shaders\\debug\\vs_debug_normal.glsl", dir + "\\shaders\\debug\\gs_debug_normal.glsl", dir + "\\shaders\\debug\\fs_debug_normal.glsl");
 	#endif
 }
 
@@ -143,7 +143,7 @@ void SRW::sharedUniforms(mat4<float>& viewProj, vec3<float>& cameraPos, bool upd
 			else{
 				unsigned char* buffer = new unsigned char[blockSize];
 				const char* member[]  = {"viewProj", "cameraPos"};
-				uint count = 2;
+				const uint count = 2;
 				uint indices[count];
 				glGetUniformIndices(prog, count, member, indices);
 				for(uint i = 0; i < count; ++i){
@@ -185,7 +185,7 @@ void SRW::sharedUniforms(mat4<float>& viewProj, vec3<float>& cameraPos, bool upd
 void SRW::sharedUniforms(Sun* sun, std::vector<PointLight>* pointLightArray, std::vector<SpotLight>* spotLightArray){
 	// - Para cada shader que usa o bloco uniforme, abri-lôs para determinar a quantidade de luzes lidas pelas funções
 	// de iluminação
-	std::vector<std::string> paths = {"../shaders/object/fs_textured.glsl", "../shaders/object/fs_uniform_color.glsl"};
+	std::vector<std::string> paths = {"../../../shaders/object/fs_textured.glsl", "../../../shaders/object/fs_uniform_color.glsl"};
 	for(uint i = 0; i < paths.size(); ++i){
 		std::fstream file(paths[i].c_str(), std::ios_base::in);
 		if(!file.is_open()){
@@ -430,6 +430,7 @@ void SRW::initUnifSampler2D(){
 		}
 	}
 }
+
 void SRW::initUnifSamplerCubemap(){
 	if(!samplerCubemap.empty()){
 		for(uint i = 0; i < samplerCubemap.size(); ++i){
@@ -599,6 +600,7 @@ void SRW::addTexture(std::string texPath, std::string uniformName, uint texUnit,
 	stbi_image_free(data);	
 	sampler2D.push_back(uniform1i(uniformName.c_str(), texUnit, id));
 }
+
 void SRW::addTexture(uint& id, std::string uniformName, uint texUnit, uint uniformType){
 	if(uniformType){
 		samplerCubemap.push_back(uniform1i(uniformName.c_str(), texUnit, id));
@@ -762,4 +764,108 @@ void SRW::info(){
 			unifMat4f[i].value->show(unifMat4f[i].label);
 		}
 	}
+}
+
+// - To create and display shaders information
+
+std::string SRW::readShaderSource(const char* pathfile){
+	std::string strShader;
+	std::ifstream fromFile(pathfile, std::ios_base::binary);
+	if(!fromFile.is_open()){
+		std::cerr << "Could not open file " << pathfile << "!" << std::endl;
+	}
+	else{
+		std::stringstream shader;
+		shader << fromFile.rdbuf();
+		strShader = shader.str();
+		fromFile.close();
+	}
+	return strShader;
+}
+
+void SRW::printProgramLog(GLuint program){
+	//Verifica se o parâmetro é um objeto de programa válido
+	if(glIsProgram(program)){
+		int infoLogLength = 0;
+		int maxLength = infoLogLength;
+		//Consulta um parâmetro do objeto de programa
+		glGetProgramiv(program, GL_INFO_LOG_LENGTH, &maxLength);
+		char* infoLog = new char[maxLength];
+		//Retorna a informação de log de um objeto de programa
+		glGetProgramInfoLog(program, maxLength, &infoLogLength, infoLog);
+		if(infoLogLength > 0){
+			std::cerr << infoLog << std::endl;
+		}
+		delete[] infoLog;
+	}
+	else{
+		std::cerr << "Name " << program << " is not a program!" << std::endl;
+	}
+}
+
+void SRW::printShaderLog(GLuint shader){
+	if(glIsShader(shader)){
+		int infoLogLength = 0;
+		int maxLength = infoLogLength;
+		glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &maxLength);
+		char* infoLog = new char[maxLength];
+		glGetShaderInfoLog(shader, maxLength, &infoLogLength, infoLog);
+		if(infoLogLength > 0){
+			std::cerr << infoLog << std::endl;
+		}
+		delete[] infoLog;
+	}
+	else{
+		std::cerr << "Name " << shader << " is not a sahder!" << std::endl;
+	}
+}
+
+bool SRW::createShader(GLuint& program, GLenum shaderType, const std::string& shaderSource){
+	GLuint shader = glCreateShader(shaderType);
+	const char* strFileData = shaderSource.c_str();
+	glShaderSource(shader, 1, &strFileData, NULL);
+	glCompileShader(shader);
+	GLint isCompiled = GL_FALSE;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &isCompiled);
+	if(isCompiled != GL_TRUE){
+		switch(shaderType){
+			case GL_VERTEX_SHADER:
+				std::cerr << "Unable to compile vertex shader!\n" << shader << std::endl;
+				break;
+			case GL_FRAGMENT_SHADER:
+				std::cerr << "Unable to compile fragment shader!\n" << shader << std::endl;
+				break;
+			case GL_GEOMETRY_SHADER:
+				std::cerr << "Unable to compile geometry shader!\n" << shader << std::endl;
+				break;
+		}
+		std::cerr << "Unable to compile vertex shader! " << shader << std::endl;
+		printShaderLog(shader);
+		return false;
+	}
+	else{
+		glAttachShader(program, shader);
+		return true;
+	}
+}
+
+bool SRW::createProgram(GLuint& program){
+	program = glCreateProgram();
+	if(program == 0){
+		std::cerr << "Program create failed!" << std::endl;
+		return false;
+	}
+	return true;
+}
+
+bool SRW::linkProgram(GLuint& program){
+	glLinkProgram(program);
+	GLint isLinked = GL_TRUE;
+	glGetProgramiv(program, GL_LINK_STATUS, &isLinked);
+	if(isLinked != GL_TRUE){
+		std::cerr << "Error linking program " << program << std::endl;
+		printProgramLog(program);
+		return false;
+	}
+	return true;
 }

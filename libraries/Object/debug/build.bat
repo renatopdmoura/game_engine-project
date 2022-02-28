@@ -1,0 +1,1 @@
+cl /Foobj/ /EHsc /std:c++17 /I../../../include debug.cpp ../../Common/Core.cpp ../../SRW/SRW.cpp ../../Camera/Camera.cpp ../Object.cpp glew32.lib OpenGL32.lib SDL2.lib assimp-vc142-mtd.lib /link /LIBPATH:../../../lib64

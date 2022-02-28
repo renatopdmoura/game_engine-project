@@ -2,22 +2,24 @@
 #define OBJECT_H
 
 #include "../Common/Common.hpp"
-#include "../Math/Math.hpp"
 #include "../SRW/SRW.hpp"
 #include "../Camera/Camera.hpp"
-#include "../Text/Text.hpp"
+// #include "../Text/Text.hpp"
+
+// - Glew/OpenGL
+#include "GL/glew.h"
 
 // - Standart header files
-#include <glew.h>
-#include <iostream>
-#include <fstream>
-#include <string>
 #include <vector>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <filesystem>
 
 // - Assimp header files
-#include <Importer.hpp>
-#include <scene.h>
-#include <postprocess.h>
+#include "Assimp/Importer.hpp"
+#include "Assimp/scene.h"
+#include "Assimp/postprocess.h"
 
 class Object : public SRW{
 	public:
@@ -32,7 +34,7 @@ class Object : public SRW{
 
 		static void completeness();
 		#if RENDER_DEBUG_MODE
-			static void select(Camera& camera, SDL_Event* event, std::vector<Text>& objList);
+			// static void select(Camera& camera, SDL_Event* event, std::vector<Text>& objList);
 			static void renderDebugDepth(mat4<float>& viewProj, float zNear, float zFar);
 			static void renderDebugNormal(mat4<float>& view, mat4<float>& projection);
 		#endif
@@ -56,10 +58,14 @@ class Object : public SRW{
 
 		// - Rendering
 		void render();
-		void render(uint instances);
+		void render(uint instances, uint frame);
+		void render(uint frame, bool repeat, uint msBegin, uint msEnd);
 
 		// - Setters
-		void setName(std::string pname);
+		void setName(std::string pname);	
+		void setMaterial(vec3<float> albedo, float roughness, float ao, float matellic);
+		void setMaterial(Material& material);
+		void setTextures(std::string albedo, std::string normal, std::string roughness, std::string ao, float metallic);
 
 		// - Getters		
 		uint getVAO() const;
@@ -67,8 +73,13 @@ class Object : public SRW{
 		uint getUBO() const;
 		uint getShaderType() const;
 		std::string getName() const;
-		std::vector<float> getVertexBufferArray();
+		std::vector<float> getVertexBuffer();
 		mat4<float>& getModel();
+
+		uint getNextTick() const{
+			return next_tick;
+		}
+
 	private:
 		struct vertexAttrib{
 			vec3<float> position;
@@ -76,13 +87,6 @@ class Object : public SRW{
 			vec2<float> texcoord;
 			vec3<float> tangent;
 			vec3<float> bitangent;
-			void show(){
-				position.show("Position");
-				normal.show("Normal");
-				texcoord.show("TexCoord");
-				tangent.show("Tangent");
-				bitangent.show("Bitangent");
-			}
 		};
 		uint VAO;
 		uint VBO;
@@ -94,6 +98,12 @@ class Object : public SRW{
 		mat4<float> model;
 		std::vector<mat4<float>>* arrayModel;
 
+		// - Membros voltados as funcionalidades de animação
+		std::vector<std::vector<float>> keyframeBuffer;
+		bool enable_multiple_files = false;
+		bool rewrite_buffer_once = true;
+		uint next_tick = 0;
+
 		// - Posições relativas(objeto e observador) anteriores a uma detecção de colisão
 		vec3<float> cameraBeforeCollision;
 		mat4<float> modelBeforeCollision;
@@ -102,9 +112,11 @@ class Object : public SRW{
 		std::vector<mat4<float>> transforms;
 	};
 
-
 	// - New way to load 3d models using Assimp
-
+	// - Algorithm explanation(pt-br)
+	// - Princípio:
+	// - O Assimp deve interpretar o formato de arquivo de entrada a partir do construtor da classe Model. Model é um container para estruturas de dados de vertices, indíces e texturas. Esses tipos de dados deverão ser alimentados a partir da biblioteca Assimp e então carregados para o tratamento por funções OpenGL adequadas.
+	
 	class Vertex{
 	public:
 		vec3<float> position;
@@ -116,6 +128,7 @@ class Object : public SRW{
 	public:
 		uint id;
 		std::string type;
+		aiString path;
 	};
 
 	class Mesh{
@@ -123,108 +136,27 @@ class Object : public SRW{
 		std::vector<Vertex> vertices;
 		std::vector<uint> indices;
 		std::vector<Texture> textures;
-		Mesh(std::vector<Vertex> pVertices, std::vector<uint> pIndices, std::vector<Texture> pTextures){
-			vertices = pVertices;
-			indices  = pIndices;
-			textures = pTextures;
-		}
+		Mesh(std::vector<Vertex> pVertices, std::vector<uint> pIndices, std::vector<Texture> pTextures);	
 
-		void render(){
-			glBindVertexArray(VAO);
-			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-			glBindVertexArray(0);
-		}
+		void render(uint& program);
 	private:
 		uint VAO;
 		uint VBO;
 		uint IBO;
-
-		void setup(){
-			glGenVertexArrays(1, &VAO);
-			glGenBuffers(1, &VBO);
-			glGenBuffers(1, &IBO);
-			glBindVertexArray(VAO);
-			glBindBuffer(GL_ARRAY_BUFFER, VBO);
-			glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), vertices.data(), GL_STATIC_DRAW);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-			glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(uint), indices.data(), GL_STATIC_DRAW);
-			glEnableVertexAttribArray(0); // - positions
-			glEnableVertexAttribArray(1); // - normals
-			glEnableVertexAttribArray(2); // - texxture coordinates
-			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void*>(0));
-			glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void*>(sizeof(vec3<float>)));
-			glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), reinterpret_cast<void*>(sizeof(vec3<float>) * 2));
-			glBindVertexArray(0);
-		}
+		void setup();	
 	};
 
-	class Model{
+	class Model : public SRW{
 	public:
-		Model(std::string path){
-			loadModel(path);
-		}
-		void render(){
-			for(std::vector<Mesh>::iterator it = meshes.begin(); it != meshes.end(); ++it){
-				(*it).render();
-			}
-		}
+		Model(std::string path, uint prog);
+		void render();
 	private:
 		std::vector<Mesh> meshes;
 		std::string directory;
-		
-		void loadModel(std::string path){
-			Assimp::Importer import;
-			const aiScene *scene = import.ReadFile(path, aiProcess_Triangulate | aiProcess_FlipUVs);
-			if(!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode){
-				std::cout << "ERROR::ASSIMP::" << import.GetErrorString() << std::endl;
-			}
-			processNode(scene->mRootNode, scene);
-		}
-		
-		void processNode(aiNode *node, const aiScene *scene){
-			for(uint i = 0; i < node->mNumMeshes; ++i){
-				aiMesh *mesh = scene->mMeshes[node->mMeshes[i]];
-				meshes.push_back(processMesh(mesh, scene));
-			}
-			for(uint i = 0; i < node->mNumChildren; ++i){
-				processNode(node->mChildren[i], scene);
-			}
-		}
-
-		Mesh processMesh(aiMesh *mesh, const aiScene *scene){
-			std::vector<Vertex> vertices;
-			std::vector<uint> indices;
-			std::vector<Texture> textures;
-			for(uint i = 0; i < mesh->mNumVertices; ++i){
-				Vertex vertex;
-				vec3<float> vector;
-				vector.x = mesh->mVertices[i].x;
-				vector.y = mesh->mVertices[i].y;
-				vector.z = mesh->mVertices[i].z;
-				vertex.position = vector;
-				vector.x = mesh->mNormals[i].x;
-				vector.y = mesh->mNormals[i].y;
-				vector.z = mesh->mNormals[i].z;
-				vertex.normal = vector;
-				if(mesh->mTextureCoords[0]){
-					vec2<float> vec;
-					vec.x = mesh->mTextureCoords[0][i].x;
-					vec.y = mesh->mTextureCoords[0][i].y;
-					vertex.texCoords = vec;
-				}
-				else
-					vertex.texCoords = vec2<float>(0.0f, 0.0f);
-			}
-			for(uint i = 0; i < mesh->mNumFaces; ++i){
-				aiFace face = mesh->mFaces[i];
-				for(uint j = 0; j < face.mNumIndices; ++j)
-					indices.push_back(face.mIndices[j]);
-			}
-			return Mesh(vertices, indices, textures);
-
-		}
-		
+		uint program;		
+		void loadModel(std::string path);		
+		void processNode(aiNode* node, const aiScene* scene);
+		Mesh processMesh(aiMesh* mesh, const aiScene* scene);		
 		std::vector<Texture> loadMaterialTextures(aiMaterial *mat, aiTextureType type, std::string typeName);
 	};
-
 #endif

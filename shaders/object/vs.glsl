@@ -29,7 +29,7 @@ void main(){
 	T       = normalize(T - dot(T, N) * N);
 	vec3 B  = NS * cross(N, T);
 	vs_out.TBN          = mat3(T, B, N);
-	vs_out.normal 		= NS * normal;
+	vs_out.normal 	    = NS * normal;
 	vs_out.fragWorldPos = vec3(model * position);
 	vs_out.cameraPos    = vec3(cameraPos);
 	vs_out.texCoords    = texCoords;

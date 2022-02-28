@@ -1,4 +1,5 @@
-#include "..\Common\Common.hpp"
+#include "../Common/Common.hpp"
+#include "../Common/Core.hpp"
 #include "Camera.hpp"
 
 Camera::Camera(vec3<float> from, vec3<float> to, float theta, float near, float far){
@@ -12,7 +13,7 @@ Camera::Camera(vec3<float> from, vec3<float> to, float theta, float near, float 
 	position       = from;
 	target         = to;
 	view           = lookAt(position, position + target, vec3<float>(0.0f, 1.0f, 0.0f));
-	projection     = perspective(fovy, (float)ext_screen_width / (float)ext_screen_height, zNear, zFar);
+	projection     = perspective(fovy, (float)Core::ScreenWidth / (float)Core::ScreenHeight, zNear, zFar);
 	viewProjection = view * projection;
 	FOWARD 		   = false;
 	BACKFOWARD 	   = false;
@@ -77,10 +78,10 @@ void Camera::mouseEvent(SDL_Event* event){
 void Camera::windowEvent(SDL_Event* event){
 	if(event->type == SDL_WINDOWEVENT){
 		if(event->window.event == SDL_WINDOWEVENT_SIZE_CHANGED){
-			ext_screen_width  = event->window.data1;
-			ext_screen_height = event->window.data2;
-			projection        = perspective(fovy, (float)ext_screen_width / (float)ext_screen_height, zNear, zFar);
-			glViewport(0, 0, ext_screen_width, ext_screen_height); 
+			Core::ScreenWidth  = event->window.data1;
+			Core::ScreenHeight = event->window.data2;
+			projection = perspective(fovy, (float)Core::ScreenWidth / (float)Core::ScreenHeight, zNear, zFar);
+			glViewport(0, 0, Core::ScreenWidth, Core::ScreenHeight); 
 		}
 	}
 }
@@ -103,11 +104,6 @@ void Camera::updateCoordinates(){
 		position = position - target * (speed * deltaTime);
 	lastFrameTime = currentFrameTime;
 	updateMatrices();
-	
-	if(RIGHT || LEFT || FOWARD || BACKFOWARD) 
-		sfx->play();
-	else
-		sfx->stop();
 }
 
 void Camera::updateCamera(){

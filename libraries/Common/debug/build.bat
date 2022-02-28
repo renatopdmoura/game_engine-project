@@ -1,0 +1,1 @@
+cl /Foobj/ /Wall /EHsc /std:c++17 /I../../../include debug.cpp ../Core.cpp glew32.lib OpenGL32.lib SDL2.lib /link /LIBPATH:../../../lib64

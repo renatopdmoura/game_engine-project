@@ -4,11 +4,14 @@
 #include "../libraries/Math/Math.hpp"
 #include "../Datatype/Datatype.hpp"
 
-#include <glew.h>
-#include <SDL.h>
+// - Glew/GL
+#include "GL/glew.h"
+
+// - Stanart header files
 #include <vector>
 #include <cstring>
 #include <string>
+#include <sstream>
 #include <fstream>
 #include <iostream>
 
@@ -74,10 +77,16 @@ public:
 	SRW();
 	virtual ~SRW();
 		
-	// - To programs [DONED]
+	// - To generate shader programs identifier [DONED]	
+	static std::string readShaderSource(const char* pathfile);
+	static void printProgramLog(GLuint program);
+	static void printShaderLog(GLuint shader);
+	static bool createShader(GLuint& program, GLenum shaderType, const std::string& shaderSource);
+	static bool createProgram(GLuint& program);
+	static bool linkProgram(GLuint& program);
 	static uint genProgramShader(std::string vs_path, std::string fs_path);
 	static uint genProgramShader(std::string vs_path, std::string gs_path, std::string fs_path);
-	static void genProgramShaders();
+	static void genProgramShaders(std::string dir = "..\\..\\..");
 
 	// - To uniform buffers
 	static void genGeometryBuffer(uint& gBuffer, uint& gDepth, uint& gPosition, uint& gNormal, uint& gAlbedo, uint width, uint height);
